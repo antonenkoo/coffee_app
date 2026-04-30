@@ -2,25 +2,37 @@
 import { state } from './state.js'
 import { formatRatio, formatTime, celsiusToFahrenheit, round } from './calculator.js'
 import { getWarnings } from './warnings.js'
-import { getSteps } from './steps.js'
-import { V60 } from '../data/v60.js'
-import { AEROPRESS } from '../data/aeropress.js'
+import { getSteps }    from './steps.js'
+import { getTips }     from './tips.js'
+import { V60 }         from '../data/v60.js'
+import { AEROPRESS }   from '../data/aeropress.js'
 
 export function getMethodData() {
   return state.method === 'v60' ? V60 : AEROPRESS
 }
 
+// ─── Composite renders ────────────────────────────────────────────────────────
+
+/** Full re-render: params + all reactive blocks. */
 export function renderAll() {
   renderParams()
+  renderDynamic()
+}
+
+/** Reactive blocks only (warnings + steps + tips). No param fields. */
+export function renderDynamic() {
   renderWarnings()
   renderSteps()
+  renderTips()
 }
+
+// ─── Individual renders ───────────────────────────────────────────────────────
 
 export function renderParams() {
   document.getElementById('coffee-input').value = round(state.coffee_g, 1)
-  document.getElementById('water-input').value = round(state.water_g, 0)
-  document.getElementById('ratio-input').value = round(state.ratio, 1)
-  document.getElementById('time-input').value = formatTime(state.brew_time_sec)
+  document.getElementById('water-input').value  = round(state.water_g, 0)
+  document.getElementById('ratio-input').value  = round(state.ratio, 1)
+  document.getElementById('time-input').value   = formatTime(state.brew_time_sec)
 
   const tempBtn = document.getElementById('temp-unit-toggle')
   if (state.temp_unit === 'C') {
@@ -35,12 +47,8 @@ export function renderParams() {
 export function renderWarnings() {
   const el = document.getElementById('warnings')
   try {
-    const methodData = getMethodData()
-    const warnings = getWarnings(state, methodData)
-    if (warnings.length === 0) {
-      el.innerHTML = ''
-      return
-    }
+    const warnings = getWarnings(state, getMethodData())
+    if (warnings.length === 0) { el.innerHTML = ''; return }
     el.innerHTML = warnings.map(w => `
       <div class="warning warning--${w.level}">
         <span class="warning-message">${w.message}</span>
@@ -56,24 +64,40 @@ export function renderWarnings() {
 export function renderSteps() {
   const list = document.getElementById('steps-list')
   const steps = getSteps(state)
-  list.innerHTML = steps.map(s =>
-    `<li><span class="step-time">${s.time}</span><span class="step-action">${s.action}</span></li>`
-  ).join('')
+  list.innerHTML = steps.map(s => `
+    <li>
+      <span class="step-time">${s.time}</span>
+      <div class="step-body">
+        <span class="step-action">${s.action}</span>
+        ${s.note ? `<span class="step-note">${s.note}</span>` : ''}
+      </div>
+    </li>`).join('')
+}
+
+export function renderTips() {
+  const el = document.getElementById('tips-list')
+  if (!el) return
+  try {
+    const tips = getTips(state, getMethodData())
+    el.innerHTML = tips.map(t => `
+      <li class="tip-item">
+        <span class="tip-label">${t.label}</span>
+        <span class="tip-text">${t.text}</span>
+      </li>`).join('')
+  } catch (e) {
+    console.error('renderTips:', e)
+    el.innerHTML = ''
+  }
 }
 
 export function renderMethodUI() {
-  // Show/hide AeroPress style toggle
   const styleRow = document.getElementById('aeropress-style-row')
-  if (styleRow) {
-    styleRow.style.display = state.method === 'aeropress' ? 'flex' : 'none'
-  }
+  if (styleRow) styleRow.style.display = state.method === 'aeropress' ? 'flex' : 'none'
 
-  // Update active method button
   document.querySelectorAll('.method-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.method === state.method)
   })
 
-  // Update active style button
   document.querySelectorAll('.style-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.style === state.aeropress_style)
   })

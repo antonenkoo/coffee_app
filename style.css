@@ -295,6 +295,7 @@ main {
 .warning--info    .warning-advice { color: rgba(200, 169, 110, 0.65); }
 
 /* ─── Brew Steps ─────────────────────────────────────────────────────────── */
+/* Step body wraps action + note vertically */
 #brew-steps {
   background: var(--surface);
   border-radius: var(--radius);
@@ -358,6 +359,13 @@ main {
   padding-top: 1px;
 }
 
+.step-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
 .step-action {
   font-size: 0.9rem;
   color: var(--text);
@@ -366,6 +374,64 @@ main {
 
 .step-action strong {
   color: var(--accent);
+}
+
+.step-note {
+  font-size: 0.775rem;
+  color: var(--text-dim);
+  font-style: italic;
+  line-height: 1.4;
+}
+
+/* ─── Barista Tips ─────────────────────────────────────────────────────────── */
+#barista-tips {
+  background: var(--surface);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.tips-header {
+  padding: var(--gap-m);
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--accent);
+  border-bottom: 1px solid rgba(200, 169, 110, 0.1);
+}
+
+#tips-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  padding: var(--gap-s) var(--gap-m) var(--gap-m);
+  gap: 2px;
+}
+
+.tip-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(200, 169, 110, 0.06);
+}
+
+.tip-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.tip-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--accent);
+}
+
+.tip-text {
+  font-size: 0.875rem;
+  color: var(--text);
+  line-height: 1.5;
 }
 
 /* ─── Modal ─────────────────────────────────────────────────────────────── */

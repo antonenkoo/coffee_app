@@ -3,7 +3,7 @@ import { formatTime } from './calculator.js'
 
 /**
  * Single entry point. Returns step array for current state.
- * Each step: { time: string, action: string }
+ * Each step: { time: string, action: string, note: string|null }
  */
 export function getSteps(state) {
   const { method, coffee_g, water_g, temp_c, brew_time_sec, aeropress_style } = state
@@ -20,37 +20,56 @@ function _v60Steps(coffee_g, water_g, temp_c, brew_time_sec) {
 
   // Scale pour intervals proportionally to brew time (base = 180s)
   const scale     = Math.max(0.7, Math.min(1.6, brew_time_sec / 180))
-  const pour1_sec = bloom_sec                            // pour 1 immediately after bloom
-  const pour2_sec = Math.round(pour1_sec + 28 * scale)  // base: +28s → 1:13, scaled
+  const pour1_sec = bloom_sec
+  const pour2_sec = Math.round(pour1_sec + 28 * scale)
   const pour1_g   = Math.round(water_g * 0.6)
   const drain_end = brew_time_sec
 
   const tech = _v60PourTechnique(temp_c)
 
+  // Low-temp extended time advisory (injected into drain step note)
+  const lowTempAdvisory = temp_c < 89
+    ? ` При ${temp_c}°C рекомендуется ${formatTime(Math.round(brew_time_sec * 1.12))}+ для полной экстракции.`
+    : ''
+
   return [
     {
       time:   '0:00',
       action: `Bloom: влить <strong>${bloom_g}г</strong> воды, аккуратно перемешать все сухие частицы`,
+      note:   `Соотношение 2:1 кофе/вода — стандарт дегазации; для тёмной обжарки достаточно 30 сек`,
     },
     {
       time:   `0:00 – ${formatTime(bloom_sec)}`,
       action: `Ждать ${bloom_sec} сек — дать газам выйти (блум)`,
+      note:   temp_c > 94
+        ? `${temp_c}°C — высокая: CO₂ выходит быстрее, 40 сек достаточно`
+        : temp_c < 89
+          ? `${temp_c}°C — низкая: продлите до 50–55 сек для полной дегазации`
+          : null,
     },
     {
       time:   formatTime(pour1_sec),
       action: `Полив 1: долить до <strong>${pour1_g}г</strong>. ${tech.pour1}`,
+      note:   temp_c > 94
+        ? `${temp_c}°C — высокая температура усиливает тело и скорость экстракции`
+        : temp_c < 89
+          ? `${temp_c}°C — низкая: лейте медленнее, задержитесь на 5–10 сек дольше`
+          : `${temp_c}°C — оптимальная зона, равномерная предсказуемая экстракция`,
     },
     {
       time:   formatTime(pour2_sec),
       action: `Полив 2: долить до <strong>${water_g}г</strong>. ${tech.pour2}`,
+      note:   'Спираль снаружи закрывает гущу по краям — важна равномерность последнего пролива',
     },
     {
       time:   `~${formatTime(pour2_sec + 25)} – ${formatTime(drain_end)}`,
       action: 'Дренаж — вода стекает через фильтр',
+      note:   `Норма: до ${formatTime(drain_end)}. Быстрее 2:30 → помол крупноват; медленнее ${formatTime(drain_end + 30)} → слишком мелко.${lowTempAdvisory}`,
     },
     {
       time:   `~${formatTime(drain_end)}`,
       action: 'Слегка покрутить V60 для выравнивания гущи ☕',
+      note:   'Плоское дно гущи = равномерная экстракция по всей площади фильтра',
     },
   ]
 }
@@ -88,13 +107,20 @@ function _aeropressSteps(coffee_g, water_g, temp_c, style, brew_time_sec) {
   const steep_sec = Math.max(30, brew_time_sec - press_sec)
   const done_sec  = steep_sec + press_sec
 
-  // Temperature note injected into the steep step
+  // Temperature note injected into steep step
   let tempNote = ''
   if (temp_c < 80) {
-    tempNote = ' — низкая температура, настаивайте дольше для полной экстракции'
+    tempNote = ` — низкая температура, настаивайте дольше для полной экстракции`
   } else if (temp_c > 93) {
-    tempNote = ' — высокая температура, достаточно 60–90 сек'
+    tempNote = ` — высокая температура, достаточно 60–90 сек`
   }
+
+  // Per-pour note based on temp
+  const pourNote = temp_c > 94
+    ? `${temp_c}°C — высокая: быстрая экстракция, сократите настаивание на 10–15 сек`
+    : temp_c < 80
+      ? `${temp_c}°C — низкая: перемешайте активнее (15–20 сек) для равномерного контакта`
+      : null
 
   if (style === 'inverted') {
     const filter_sec = Math.max(steep_sec - 10, Math.round(steep_sec * 0.88))
@@ -102,34 +128,42 @@ function _aeropressSteps(coffee_g, water_g, temp_c, style, brew_time_sec) {
       {
         time:   '—',
         action: 'Перевернуть AeroPress поршнем вниз, поршень на 1 см внутри камеры',
+        note:   'Инвертированный метод — полный контроль настаивания без преждевременного дренажа',
       },
       {
         time:   '0:00',
         action: `Засыпать <strong>${coffee_g}г</strong> кофе (средний помол)`,
+        note:   null,
       },
       {
         time:   '0:00',
         action: `Залить <strong>${water_g}г</strong> воды (${temp_c}°C), перемешать 10 сек`,
+        note:   pourNote,
       },
       {
         time:   `0:00 – ${formatTime(steep_sec)}`,
         action: `Настаивание <strong>${formatTime(steep_sec)}</strong>${tempNote}`,
+        note:   'Не перемешивайте во время настаивания — турбулентность нарушает равномерность',
       },
       {
         time:   formatTime(filter_sec),
         action: 'Установить бумажный фильтр, смочить его',
+        note:   'Промывка фильтра кипятком устраняет бумажный привкус',
       },
       {
         time:   formatTime(steep_sec),
         action: 'Аккуратно перевернуть AeroPress на кружку',
+        note:   null,
       },
       {
         time:   `${formatTime(steep_sec)} – ${formatTime(done_sec)}`,
         action: 'Медленно давить поршень ~30 сек до шипения воздуха',
+        note:   'Давление ~1 кг — медленный равномерный пролив; остановитесь на шипении воздуха',
       },
       {
         time:   formatTime(done_sec),
         action: '☕ Готово!',
+        note:   null,
       },
     ]
   }
@@ -140,30 +174,37 @@ function _aeropressSteps(coffee_g, water_g, temp_c, style, brew_time_sec) {
     {
       time:   '—',
       action: 'Установить бумажный фильтр, прогреть кипятком, слить воду',
+      note:   'Промывка фильтра устраняет бумажный привкус и прогревает чашку',
     },
     {
       time:   '0:00',
       action: `Засыпать <strong>${coffee_g}г</strong> кофе (средний помол)`,
+      note:   null,
     },
     {
       time:   '0:00',
       action: `Залить <strong>${water_g}г</strong> воды (${temp_c}°C), перемешать 10 сек`,
+      note:   pourNote,
     },
     {
       time:   formatTime(insert_sec),
       action: 'Вставить поршень — создать вакуум, не давить',
+      note:   'Вакуум замедляет дренаж и увеличивает время контакта воды с кофе',
     },
     {
       time:   `${formatTime(insert_sec)} – ${formatTime(steep_sec)}`,
       action: `Настаивание <strong>${formatTime(steep_sec - insert_sec)}</strong>${tempNote}`,
+      note:   null,
     },
     {
       time:   `${formatTime(steep_sec)} – ${formatTime(done_sec)}`,
       action: 'Медленно давить поршень ~30 сек до шипения',
+      note:   'Остановитесь на шипении — последние капли содержат горечь',
     },
     {
       time:   formatTime(done_sec),
       action: '☕ Готово!',
+      note:   null,
     },
   ]
 }
