@@ -2,7 +2,7 @@
 import { state } from './state.js'
 import { formatRatio, formatTime, celsiusToFahrenheit, round } from './calculator.js'
 import { getWarnings } from './warnings.js'
-import { getV60Steps, getAeropressSteps } from './steps.js'
+import { getSteps } from './steps.js'
 import { V60 } from '../data/v60.js'
 import { AEROPRESS } from '../data/aeropress.js'
 
@@ -41,19 +41,17 @@ export function renderWarnings() {
     el.innerHTML = ''
     return
   }
-  el.innerHTML = warnings.map(w => `<div class="warning">${w}</div>`).join('')
+  el.innerHTML = warnings.map(w => `
+    <div class="warning warning--${w.level}">
+      <span class="warning-message">${w.message}</span>
+      <span class="warning-impact">${w.impact}</span>
+      <span class="warning-advice">${w.advice}</span>
+    </div>`).join('')
 }
 
 export function renderSteps() {
   const list = document.getElementById('steps-list')
-  let steps
-
-  if (state.method === 'v60') {
-    steps = getV60Steps(state.coffee_g, state.water_g)
-  } else {
-    steps = getAeropressSteps(state.coffee_g, state.water_g, state.temp_c, state.aeropress_style)
-  }
-
+  const steps = getSteps(state)
   list.innerHTML = steps.map(s =>
     `<li><span class="step-time">${s.time}</span><span class="step-action">${s.action}</span></li>`
   ).join('')

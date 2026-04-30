@@ -254,13 +254,45 @@ main {
 
 .warning {
   padding: 10px var(--gap-m);
+  border-radius: var(--radius-s);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.warning--warning {
   background: var(--warning-bg);
   border: 1px solid rgba(232, 165, 58, 0.3);
-  border-radius: var(--radius-s);
-  color: var(--warning);
+}
+
+.warning--info {
+  background: rgba(200, 169, 110, 0.08);
+  border: 1px solid rgba(200, 169, 110, 0.2);
+}
+
+.warning-message {
   font-size: 0.875rem;
+  font-weight: 600;
   line-height: 1.4;
 }
+
+.warning--warning .warning-message { color: var(--warning); }
+.warning--info    .warning-message { color: var(--accent); }
+
+.warning-impact {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.warning-advice {
+  font-size: 0.8rem;
+  font-style: italic;
+  line-height: 1.4;
+}
+
+.warning--warning .warning-advice { color: rgba(232, 165, 58, 0.75); }
+.warning--info    .warning-advice { color: rgba(200, 169, 110, 0.65); }
 
 /* ─── Brew Steps ─────────────────────────────────────────────────────────── */
 #brew-steps {

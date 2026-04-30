@@ -114,6 +114,7 @@ document.getElementById('time-input').addEventListener('change', (e) => {
     setState({ brew_time_sec: sec })
     e.target.value = formatTime(sec)
     renderWarnings()
+    renderSteps()
   }
 })
 
