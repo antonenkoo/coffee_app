@@ -107,15 +107,28 @@ document.getElementById('temp-unit-toggle').addEventListener('click', () => {
 
 // ─── Brew time ────────────────────────────────────────────────────────────────
 
-document.getElementById('time-input').addEventListener('change', (e) => {
-  const raw = e.target.value.trim()
+function _applyTime(raw, reformat = false) {
   const sec = parseTime(raw)
   if (!isNaN(sec) && sec > 0) {
     setState({ brew_time_sec: sec })
-    e.target.value = formatTime(sec)
+    if (reformat) document.getElementById('time-input').value = formatTime(sec)
     renderWarnings()
     renderSteps()
   }
+}
+
+// Live update while typing (no reformat so cursor doesn't jump)
+document.getElementById('time-input').addEventListener('input', (e) => {
+  _applyTime(e.target.value)
+})
+
+// Reformat to M:SS on blur or Enter
+document.getElementById('time-input').addEventListener('change', (e) => {
+  _applyTime(e.target.value.trim(), true)
+})
+
+document.getElementById('time-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') _applyTime(e.target.value.trim(), true)
 })
 
 // ─── Modal ────────────────────────────────────────────────────────────────────

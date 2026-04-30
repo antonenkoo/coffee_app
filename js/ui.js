@@ -34,19 +34,23 @@ export function renderParams() {
 
 export function renderWarnings() {
   const el = document.getElementById('warnings')
-  const methodData = getMethodData()
-  const warnings = getWarnings(state, methodData)
-
-  if (warnings.length === 0) {
+  try {
+    const methodData = getMethodData()
+    const warnings = getWarnings(state, methodData)
+    if (warnings.length === 0) {
+      el.innerHTML = ''
+      return
+    }
+    el.innerHTML = warnings.map(w => `
+      <div class="warning warning--${w.level}">
+        <span class="warning-message">${w.message}</span>
+        <span class="warning-impact">${w.impact}</span>
+        <span class="warning-advice">${w.advice}</span>
+      </div>`).join('')
+  } catch (e) {
+    console.error('renderWarnings:', e)
     el.innerHTML = ''
-    return
   }
-  el.innerHTML = warnings.map(w => `
-    <div class="warning warning--${w.level}">
-      <span class="warning-message">${w.message}</span>
-      <span class="warning-impact">${w.impact}</span>
-      <span class="warning-advice">${w.advice}</span>
-    </div>`).join('')
 }
 
 export function renderSteps() {

@@ -49,9 +49,18 @@ export function formatTime(seconds) {
 }
 
 export function parseTime(str) {
-  const parts = str.split(':').map(Number)
-  if (parts.length === 2) return parts[0] * 60 + (parts[1] || 0)
-  return NaN
+  const s = str.trim()
+  if (s.includes(':')) {
+    const parts = s.split(':').map(Number)
+    if (parts.length === 2 && !isNaN(parts[0])) {
+      return parts[0] * 60 + (isNaN(parts[1]) ? 0 : parts[1])
+    }
+    return NaN
+  }
+  // Plain number: treat as seconds if ≥ 60, as minutes otherwise (e.g. "3" → 180s, "180" → 180s)
+  const n = parseFloat(s)
+  if (isNaN(n) || n <= 0) return NaN
+  return n < 60 ? Math.round(n * 60) : Math.round(n)
 }
 
 export function celsiusToFahrenheit(c) {
