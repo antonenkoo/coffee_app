@@ -20,6 +20,21 @@
       <button class="method-btn" data-method="aeropress">AeroPress</button>
     </section>
 
+    <!-- Recipe Template Selector -->
+    <div id="template-row">
+      <select id="template-select"></select>
+      <p id="template-description" class="hidden"></p>
+    </div>
+
+    <!-- Template Match Suggestion Banner -->
+    <div id="template-suggestion" class="hidden">
+      <span id="suggestion-text"></span>
+      <div class="suggestion-actions">
+        <button id="suggestion-apply">Применить</button>
+        <button id="suggestion-dismiss">✕</button>
+      </div>
+    </div>
+
     <!-- AeroPress style toggle (hidden for V60) -->
     <div id="aeropress-style-row" class="style-row" style="display:none">
       <span class="style-label">Style</span>
@@ -37,6 +52,7 @@
         <div class="param-input-wrap">
           <input id="coffee-input" type="number" step="0.5" min="5" max="100">
           <span class="unit">g</span>
+          <span id="coffee-ghost" class="param-ghost hidden"></span>
         </div>
       </div>
 
@@ -45,6 +61,7 @@
         <div class="param-input-wrap">
           <input id="water-input" type="number" step="5" min="50" max="1000">
           <span class="unit">g</span>
+          <span id="water-ghost" class="param-ghost hidden"></span>
         </div>
       </div>
 
@@ -54,6 +71,7 @@
           <span class="ratio-prefix">1:</span>
           <input id="ratio-input" type="number" step="0.1" min="8" max="20">
           <button id="ratio-apply-btn" title="Apply new ratio">Apply</button>
+          <span id="ratio-ghost" class="param-ghost hidden"></span>
         </div>
       </div>
 
@@ -62,6 +80,7 @@
         <div class="param-input-wrap">
           <input id="temp-input" type="number" step="1">
           <button id="temp-unit-toggle" class="unit-toggle">°C</button>
+          <span id="temp-ghost" class="param-ghost hidden"></span>
         </div>
       </div>
 
@@ -70,25 +89,73 @@
         <div class="param-input-wrap">
           <input id="time-input" type="text" placeholder="3:00" inputmode="numeric">
           <span class="unit">min</span>
+          <span id="time-ghost" class="param-ghost hidden"></span>
+        </div>
+      </div>
+
+      <div class="param-row grind-row">
+        <label>Grind Size</label>
+        <div class="param-input-wrap grind-display">
+          <span id="grind-microns" class="grind-value">—</span>
+          <span class="unit">мкм</span>
+          <span class="grind-sep">·</span>
+          <span id="grind-clicks" class="grind-value">—</span>
+          <span class="unit">кл C40</span>
         </div>
       </div>
 
     </section>
 
+    <!-- Pouring Techniques (V60, no template) -->
+    <section id="techniques-section" class="hidden">
+      <div class="techniques-header">Техники пролива</div>
+      <div class="techniques-list">
+        <div class="technique-card">
+          <span class="technique-name">3-пролива</span>
+          <span class="technique-desc">Блум → 60% воды → 100%. Классический контроль экстракции по этапам.</span>
+        </div>
+        <div class="technique-card">
+          <span class="technique-name">Один пролив</span>
+          <span class="technique-desc">Все воды одним непрерывным потоком после блума. Метод Хоффманна.</span>
+        </div>
+        <div class="technique-card technique-card--accent">
+          <span class="technique-name">4:6 метод</span>
+          <span class="technique-desc">40% → 3×20%. Победитель World Brewers Cup 2016. Точное управление вкусом.</span>
+        </div>
+      </div>
+    </section>
+
     <!-- Warnings -->
     <section id="warnings"></section>
 
-    <!-- Brew Steps -->
-    <details id="brew-steps" open>
-      <summary>Brew Steps</summary>
-      <ol id="steps-list"></ol>
-    </details>
-
-    <!-- Barista Tips -->
-    <section id="barista-tips">
-      <div class="tips-header">Barista Tips</div>
-      <ul id="tips-list"></ul>
+    <!-- Recommended Parameters -->
+    <section id="recommended-section">
+      <div class="rec-header">Рекомендуется для этого рецепта</div>
+      <div id="rec-content"></div>
     </section>
+
+    <!-- Brew Steps + Barista Tips (with Impossible overlay) -->
+    <div id="steps-tips-wrapper">
+
+      <div id="impossible-overlay" class="hidden">
+        <div class="impossible-inner">
+          <span class="impossible-icon">⚠</span>
+          <p class="impossible-title">Невозможные параметры</p>
+          <p class="impossible-sub">Значения выходят за допустимые пределы метода</p>
+        </div>
+      </div>
+
+      <details id="brew-steps" open>
+        <summary>Brew Steps</summary>
+        <ol id="steps-list"></ol>
+      </details>
+
+      <section id="barista-tips">
+        <div class="tips-header">Barista Tips</div>
+        <ul id="tips-list"></ul>
+      </section>
+
+    </div>
 
   </main>
 
