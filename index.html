@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Coffee Brew Calculator</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header>
+    <h1>☕ Brew Calculator</h1>
+  </header>
+
+  <main>
+
+    <!-- Method Selector -->
+    <section id="method-selector">
+      <button class="method-btn active" data-method="v60">V60</button>
+      <button class="method-btn" data-method="aeropress">AeroPress</button>
+    </section>
+
+    <!-- AeroPress style toggle (hidden for V60) -->
+    <div id="aeropress-style-row" class="style-row" style="display:none">
+      <span class="style-label">Style</span>
+      <div class="style-toggle">
+        <button class="style-btn" data-style="standard">Standard</button>
+        <button class="style-btn active" data-style="inverted">Inverted</button>
+      </div>
+    </div>
+
+    <!-- Parameters -->
+    <section id="parameters">
+
+      <div class="param-row">
+        <label for="coffee-input">Coffee</label>
+        <div class="param-input-wrap">
+          <input id="coffee-input" type="number" step="0.5" min="5" max="100">
+          <span class="unit">g</span>
+        </div>
+      </div>
+
+      <div class="param-row">
+        <label for="water-input">Water</label>
+        <div class="param-input-wrap">
+          <input id="water-input" type="number" step="5" min="50" max="1000">
+          <span class="unit">g</span>
+        </div>
+      </div>
+
+      <div class="param-row ratio-row">
+        <label for="ratio-input">Brew Ratio</label>
+        <div class="param-input-wrap ratio-wrap">
+          <span class="ratio-prefix">1:</span>
+          <input id="ratio-input" type="number" step="0.1" min="8" max="20">
+          <button id="ratio-apply-btn" title="Apply new ratio">Apply</button>
+        </div>
+      </div>
+
+      <div class="param-row">
+        <label for="temp-input">Temperature</label>
+        <div class="param-input-wrap">
+          <input id="temp-input" type="number" step="1">
+          <button id="temp-unit-toggle" class="unit-toggle">°C</button>
+        </div>
+      </div>
+
+      <div class="param-row">
+        <label for="time-input">Brew Time</label>
+        <div class="param-input-wrap">
+          <input id="time-input" type="text" placeholder="3:00" inputmode="numeric">
+          <span class="unit">min</span>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- Warnings -->
+    <section id="warnings"></section>
+
+    <!-- Brew Steps -->
+    <details id="brew-steps" open>
+      <summary>Brew Steps</summary>
+      <ol id="steps-list"></ol>
+    </details>
+
+  </main>
+
+  <!-- Ratio Adjust Modal -->
+  <div id="modal-overlay" class="hidden"></div>
+  <div id="ratio-modal" class="modal hidden">
+    <div class="modal-content">
+      <h2>Adjust Parameters</h2>
+      <p id="modal-ratio-change" class="modal-subtitle"></p>
+      <p class="modal-question">What should change to match the new ratio?</p>
+      <div id="modal-options"></div>
+      <div id="modal-preview" class="modal-preview"></div>
+      <div class="modal-actions">
+        <button id="modal-cancel" class="btn-secondary">Cancel</button>
+        <button id="modal-apply" class="btn-primary">Apply</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

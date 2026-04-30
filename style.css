@@ -1,0 +1,507 @@
+/* ─── Design Tokens ─────────────────────────────────────────────────────── */
+:root {
+  --bg:            #1a1410;
+  --surface:       #2a2018;
+  --surface-2:     #352a1e;
+  --surface-3:     #3e3025;
+  --accent:        #c8a96e;
+  --accent-hover:  #d4b87e;
+  --accent-dim:    rgba(200, 169, 110, 0.15);
+  --text:          #f0e8d8;
+  --text-muted:    #9a8870;
+  --text-dim:      #6a5a48;
+  --warning:       #e8a53a;
+  --warning-bg:    rgba(232, 165, 58, 0.12);
+  --border:        rgba(200, 169, 110, 0.2);
+
+  --gap-s:   8px;
+  --gap-m:   16px;
+  --gap-l:   24px;
+  --gap-xl:  32px;
+
+  --radius:    10px;
+  --radius-s:  6px;
+  --radius-xs: 4px;
+}
+
+/* ─── Reset & Base ──────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { font-size: 16px; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+/* ─── Layout ────────────────────────────────────────────────────────────── */
+header {
+  text-align: center;
+  padding: var(--gap-l) var(--gap-m) var(--gap-m);
+  border-bottom: 1px solid var(--border);
+}
+
+header h1 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 0.02em;
+}
+
+main {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: var(--gap-l) var(--gap-m) var(--gap-xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-l);
+}
+
+/* ─── Method Selector ───────────────────────────────────────────────────── */
+#method-selector {
+  display: flex;
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 4px;
+  gap: 4px;
+}
+
+.method-btn {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  border-radius: var(--radius-s);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.method-btn.active {
+  background: var(--accent);
+  color: var(--bg);
+  font-weight: 600;
+}
+
+.method-btn:not(.active):hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+/* ─── AeroPress Style Row ──────────────────────────────────────────────── */
+.style-row {
+  align-items: center;
+  gap: var(--gap-m);
+}
+
+.style-label {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+.style-toggle {
+  display: flex;
+  background: var(--surface);
+  border-radius: var(--radius-s);
+  padding: 3px;
+  gap: 3px;
+  flex: 1;
+}
+
+.style-btn {
+  flex: 1;
+  padding: 7px 12px;
+  border: none;
+  border-radius: var(--radius-xs);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.style-btn.active {
+  background: var(--surface-3);
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.style-btn:not(.active):hover {
+  color: var(--text);
+}
+
+/* ─── Parameters Section ────────────────────────────────────────────────── */
+#parameters {
+  background: var(--surface);
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.param-row {
+  display: flex;
+  align-items: center;
+  padding: 14px var(--gap-m);
+  gap: var(--gap-m);
+  border-bottom: 1px solid rgba(200, 169, 110, 0.08);
+}
+
+.param-row:last-child {
+  border-bottom: none;
+}
+
+.param-row label {
+  flex: 1;
+  color: var(--text);
+  font-size: 0.95rem;
+  min-width: 110px;
+}
+
+.param-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.param-input-wrap input {
+  width: 80px;
+  padding: 7px 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-s);
+  color: var(--text);
+  font-size: 1rem;
+  font-family: inherit;
+  text-align: right;
+  outline: none;
+  transition: border-color 0.15s;
+  -moz-appearance: textfield;
+}
+
+.param-input-wrap input::-webkit-inner-spin-button,
+.param-input-wrap input::-webkit-outer-spin-button {
+  opacity: 0.4;
+}
+
+.param-input-wrap input:focus {
+  border-color: var(--accent);
+}
+
+.unit {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  min-width: 20px;
+}
+
+/* Ratio row */
+.ratio-wrap {
+  gap: 4px;
+}
+
+.ratio-prefix {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+#ratio-apply-btn {
+  padding: 7px 12px;
+  background: var(--accent-dim);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-s);
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+
+#ratio-apply-btn:hover {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+/* Temperature toggle */
+.unit-toggle {
+  padding: 7px 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-s);
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.unit-toggle:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ─── Warnings ──────────────────────────────────────────────────────────── */
+#warnings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-s);
+}
+
+.warning {
+  padding: 10px var(--gap-m);
+  background: var(--warning-bg);
+  border: 1px solid rgba(232, 165, 58, 0.3);
+  border-radius: var(--radius-s);
+  color: var(--warning);
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+/* ─── Brew Steps ─────────────────────────────────────────────────────────── */
+#brew-steps {
+  background: var(--surface);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+#brew-steps summary {
+  padding: var(--gap-m);
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--accent);
+  font-size: 0.95rem;
+  user-select: none;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: var(--gap-s);
+}
+
+#brew-steps summary::before {
+  content: '▶';
+  font-size: 0.7rem;
+  transition: transform 0.2s;
+  display: inline-block;
+}
+
+#brew-steps[open] summary::before {
+  transform: rotate(90deg);
+}
+
+#steps-list {
+  padding: 0 var(--gap-m) var(--gap-m);
+  list-style: none;
+  counter-reset: step-counter;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+#steps-list li {
+  display: flex;
+  gap: var(--gap-m);
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(200, 169, 110, 0.06);
+  counter-increment: step-counter;
+  align-items: flex-start;
+}
+
+#steps-list li:last-child {
+  border-bottom: none;
+}
+
+.step-time {
+  flex-shrink: 0;
+  min-width: 80px;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+  font-weight: 600;
+  padding-top: 1px;
+}
+
+.step-action {
+  font-size: 0.9rem;
+  color: var(--text);
+  line-height: 1.45;
+}
+
+.step-action strong {
+  color: var(--accent);
+}
+
+/* ─── Modal ─────────────────────────────────────────────────────────────── */
+#modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 100;
+}
+
+.modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 101;
+  width: min(440px, calc(100vw - 32px));
+}
+
+.modal-content {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--gap-l);
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-m);
+}
+
+.modal-content h2 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.modal-subtitle {
+  font-size: 0.9rem;
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.modal-question {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+#modal-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.modal-option {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-m);
+  padding: 12px 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-s);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.modal-option:hover {
+  border-color: var(--accent);
+}
+
+.modal-option.selected {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.modal-option input[type="radio"] {
+  accent-color: var(--accent);
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.modal-option-label {
+  flex: 1;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.modal-option-preview {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-align: right;
+}
+
+.modal-option-preview strong {
+  color: var(--accent);
+}
+
+/* Preview table */
+.modal-preview {
+  background: var(--surface-2);
+  border-radius: var(--radius-s);
+  padding: var(--gap-m);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border: 1px solid var(--border);
+}
+
+.preview-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.875rem;
+}
+
+.preview-row span:first-child {
+  color: var(--text-muted);
+}
+
+.preview-row strong {
+  color: var(--accent);
+}
+
+/* Modal actions */
+.modal-actions {
+  display: flex;
+  gap: var(--gap-s);
+  justify-content: flex-end;
+  margin-top: var(--gap-s);
+}
+
+.btn-secondary, .btn-primary {
+  padding: 9px 20px;
+  border-radius: var(--radius-s);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background 0.15s, color 0.15s;
+}
+
+.btn-secondary {
+  background: transparent;
+  border-color: var(--border);
+  color: var(--text-muted);
+}
+
+.btn-secondary:hover {
+  border-color: var(--text-muted);
+  color: var(--text);
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+.btn-primary:hover {
+  background: var(--accent-hover);
+}
+
+/* ─── Utility ────────────────────────────────────────────────────────────── */
+.hidden {
+  display: none !important;
+}
+
+/* ─── Mobile adjustments ─────────────────────────────────────────────────── */
+@media (max-width: 400px) {
+  header h1 { font-size: 1.25rem; }
+  main { padding: var(--gap-m) var(--gap-s) var(--gap-xl); }
+  .param-row label { min-width: 90px; font-size: 0.9rem; }
+  .param-input-wrap input { width: 70px; }
+}
