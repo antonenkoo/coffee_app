@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Changelog — Brew Calculator</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .changelog-wrap {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: var(--gap-l) var(--gap-m) var(--gap-xl);
+      display: flex;
+      flex-direction: column;
+      gap: var(--gap-l);
+    }
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-muted);
+      font-size: 0.875rem;
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+    .back-btn:hover { color: var(--accent); }
+    .version-block {
+      display: flex;
+      flex-direction: column;
+      gap: var(--gap-m);
+    }
+    .version-header {
+      display: flex;
+      align-items: baseline;
+      gap: var(--gap-m);
+      padding-bottom: var(--gap-s);
+      border-bottom: 1px solid var(--border);
+    }
+    .version-tag {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: 0.02em;
+    }
+    .version-tag--current {
+      color: var(--text-dim);
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+    .version-date {
+      font-size: 0.8rem;
+      color: var(--text-dim);
+    }
+    .version-title {
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--text-muted);
+    }
+    .changelog-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .changelog-group-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
+      margin-bottom: 2px;
+    }
+    .changelog-item {
+      display: flex;
+      gap: 10px;
+      font-size: 0.875rem;
+      color: var(--text);
+      line-height: 1.5;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(200,169,110,0.05);
+    }
+    .changelog-item:last-child { border-bottom: none; }
+    .changelog-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--accent);
+      margin-top: 8px;
+      flex-shrink: 0;
+    }
+    .changelog-dot--muted {
+      background: var(--text-dim);
+    }
+    .badge-new {
+      display: inline-block;
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      background: var(--accent-dim);
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      border-radius: 3px;
+      padding: 1px 5px;
+      margin-left: 4px;
+      vertical-align: middle;
+    }
+    .badge-fix {
+      display: inline-block;
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      background: rgba(232, 165, 58, 0.1);
+      color: var(--warning);
+      border: 1px solid rgba(232, 165, 58, 0.3);
+      border-radius: 3px;
+      padding: 1px 5px;
+      margin-left: 4px;
+      vertical-align: middle;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>☕ Brew Calculator</h1>
+  </header>
+
+  <div class="changelog-wrap">
+    <a href="index.html" class="back-btn">← Back to App</a>
+
+    <!-- v1.2 -->
+    <div class="version-block">
+      <div class="version-header">
+        <span class="version-tag">v1.2</span>
+        <span class="version-date">май 2025</span>
+      </div>
+
+      <div class="changelog-group">
+        <div class="changelog-group-label">Исправления</div>
+
+        <div class="changelog-item">
+          <div class="changelog-dot"></div>
+          <div>Дубликаты блока Pour Technique в app.js вызывали сбой всего модуля <span class="badge-fix">fix</span></div>
+        </div>
+        <div class="changelog-item">
+          <div class="changelog-dot"></div>
+          <div>Отсутствовал импорт <code>renderSteps</code> в app.js — кнопки техник не работали <span class="badge-fix">fix</span></div>
+        </div>
+        <div class="changelog-item">
+          <div class="changelog-dot"></div>
+          <div>Переключение методов V60/AeroPress не работало из-за JS-ошибки в модуле — исправлено <span class="badge-fix">fix</span></div>
+        </div>
+      </div>
+
+      <div class="changelog-group">
+        <div class="changelog-group-label">Улучшения</div>
+
+        <div class="changelog-item">
+          <div class="changelog-dot"></div>
+          <div>Добавлены CSS-стили для активной карточки техники пролива <span class="badge-new">new</span></div>
+        </div>
+        <div class="changelog-item">
+          <div class="changelog-dot"></div>
+          <div>Добавлены стили для Footer (версия) и Toast-уведомлений <span class="badge-new">new</span></div>
+        </div>
+        <div class="changelog-item">
+          <div class="changelog-dot"></div>
+          <div>Сброс выбранной техники пролива при переключении метода <span class="badge-fix">fix</span></div>
+        </div>
+        <div class="changelog-item">
+          <div class="changelog-dot"></div>
+          <div>Синхронизация активного состояния карточки техники при renderAll <span class="badge-fix">fix</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- v1.1 -->
+    <div class="version-block">
+      <div class="version-header">
+        <span class="version-tag">v1.1</span>
+        <span class="version-date">май 2025</span>
+      </div>
+
+      <div class="changelog-group">
+        <div class="changelog-group-label">Улучшения</div>
+
+        <div class="changelog-item">
+          <div class="changelog-dot"></div>
+          <div>Нативный iOS-picker для выбора времени заваривания (колесо) <span class="badge-new">new</span></div>
+        </div>
+        <div class="changelog-item">
+          <div class="changelog-dot"></div>
+          <div>Обновлена цветовая схема — строгий минимализм, более высокий контраст <span class="badge-new">new</span></div>
+        </div>
+        <div class="changelog-item">
+          <div class="changelog-dot"></div>
+          <div>Добавлен debounce (200ms) на все числовые поля ввода — устранены лаги при быстром вводе <span class="badge-fix">fix</span></div>
+        </div>
+        <div class="changelog-item">
+          <div class="changelog-dot"></div>
+          <div>Error handling в `_afterChange()` — ошибки расчёта больше не ломают UI <span class="badge-fix">fix</span></div>
+        </div>
+        <div class="changelog-item">
+          <div class="changelog-dot"></div>
+          <div>Автосохранение параметров в localStorage — состояние сохраняется при перезагрузке <span class="badge-new">new</span></div>
+        </div>
+        <div class="changelog-item">
+          <div class="changelog-dot"></div>
+          <div>Добавлен `utils.js` — debounce, safe DOM queries, toast notifications <span class="badge-new">new</span></div>
+        </div>
+        <div class="changelog-item">
+          <div class="changelog-dot"></div>
+          <div>Страница истории версий (эта страница) с footer-ссылкой <span class="badge-new">new</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- v1.0 -->
+    <div class="version-block">
+      <div class="version-header">
+        <span class="version-tag version-tag--current">v1.0</span>
+        <span class="version-date">начальная версия</span>
+      </div>
+
+      <div class="changelog-group">
+        <div class="changelog-group-label">Основной функционал</div>
+
+        <div class="changelog-item">
+          <div class="changelog-dot changelog-dot--muted"></div>
+          <div>Калькулятор параметров для V60 и AeroPress (кофе/вода/соотношение)</div>
+        </div>
+        <div class="changelog-item">
+          <div class="changelog-dot changelog-dot--muted"></div>
+          <div>Поддержка двух режимов AeroPress: Standard и Inverted</div>
+        </div>
+        <div class="changelog-item">
+          <div class="changelog-dot changelog-dot--muted"></div>
+          <div>Шаблоны рецептов с автоматическим определением совпадения (template matching)</div>
+        </div>
+        <div class="changelog-item">
+          <div class="changelog-dot changelog-dot--muted"></div>
+          <div>Баннер с предложением применить похожий шаблон (suggestion banner)</div>
+        </div>
+        <div class="changelog-item">
+          <div class="changelog-dot changelog-dot--muted"></div>
+          <div>Модальное окно корректировки соотношения с тремя режимами (зафиксировать воду / кофе / пропорционально)</div>
+        </div>
+        <div class="changelog-item">
+          <div class="changelog-dot changelog-dot--muted"></div>
+          <div>Отображение рекомендуемой зернистости помола в мкм и кликах C40</div>
+        </div>
+        <div class="changelog-item">
+          <div class="changelog-dot changelog-dot--muted"></div>
+          <div>Переключение температуры °C / °F</div>
+        </div>
+        <div class="changelog-item">
+          <div class="changelog-dot changelog-dot--muted"></div>
+          <div>Пошаговые инструкции заваривания (Brew Steps) с таймингами</div>
+        </div>
+        <div class="changelog-item">
+          <div class="changelog-dot changelog-dot--muted"></div>
+          <div>Советы бариста (Barista Tips) для выбранного метода</div>
+        </div>
+        <div class="changelog-item">
+          <div class="changelog-dot changelog-dot--muted"></div>
+          <div>Карточки техник пролива V60 (3-пролива, Один пролив, метод 4:6)</div>
+        </div>
+        <div class="changelog-item">
+          <div class="changelog-dot changelog-dot--muted"></div>
+          <div>Оверлей «Невозможные параметры» при выходе за допустимые пределы метода</div>
+        </div>
+        <div class="changelog-item">
+          <div class="changelog-dot changelog-dot--muted"></div>
+          <div>Тёмная тема, адаптивный дизайн, ES6-модули</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

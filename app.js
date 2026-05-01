@@ -8,7 +8,7 @@ import {
   renderAll, renderDynamic, renderParams, renderMethodUI,
   renderTemplateOptions, renderTemplateDescription, renderTechniques,
   renderTemplateSuggestion, hideTemplateSuggestion, getPendingSuggestion,
-  getMethodData,
+  getMethodData, renderSteps,
 } from './js/ui.js'
 import { openRatioModal, initModal } from './js/modal.js'
 import { V60 }       from './data/v60.js'
@@ -20,7 +20,6 @@ import { checkIsPossible } from './js/CalculationEngine.js'
 
 let _dismissedSuggestionId = null
 
-/** Run after every parameter mutation. Updates derived state and re-renders. */
 function _afterChange() {
   const methodData = getMethodData()
   setState({ isPossible: checkIsPossible(state, methodData) })
@@ -28,21 +27,18 @@ function _afterChange() {
   _checkSuggestion()
 }
 
-/** Template-match detection and suggestion banner logic. */
 function _checkSuggestion() {
-  // Don't suggest when we've dismissed this match and params haven't changed recipe
   const match = findMatchingRecipe(state, state.template)
   if (match && match.recipe.id !== _dismissedSuggestionId) {
     renderTemplateSuggestion(match)
   } else if (!match) {
-    _dismissedSuggestionId = null  // reset dismissal when no longer matching
+    _dismissedSuggestionId = null
     hideTemplateSuggestion()
   } else {
-    hideTemplateSuggestion()  // dismissed
+    hideTemplateSuggestion()
   }
 }
 
-/** Apply a recipe object to state and fully re-render. */
 function applyTemplate(recipe) {
   const { id, coffee_g, water_g, ratio, temp_c, brew_time_sec, aeropress_style } = recipe
   setState({
@@ -56,7 +52,7 @@ function applyTemplate(recipe) {
   renderAll()
 }
 
-// ─── Method Switch ────────────────────────────────────────────────────────────
+// ─── Method Switch ─────────────────────────────────────────────────────────────
 
 document.querySelectorAll('.method-btn').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -64,10 +60,15 @@ document.querySelectorAll('.method-btn').forEach(btn => {
     setState({
       method,
       template: null, templateOrigin: null,
+      pour_technique: null,
       ...(method === 'v60' ? V60 : AEROPRESS).defaults,
     })
     _dismissedSuggestionId = null
     hideTemplateSuggestion()
+    // Reset active technique cards
+    document.querySelectorAll('.technique-card[data-technique]').forEach(c =>
+      c.classList.remove('active')
+    )
     renderAll()
   })
 })
@@ -97,13 +98,12 @@ document.getElementById('template-select')?.addEventListener('change', (e) => {
   if (recipe) applyTemplate(recipe)
 })
 
-// ─── Template Suggestion Actions ──────────────────────────────────────────────
+// ─── Template Suggestion Actions ────────────────────────────────────────────
 
 document.getElementById('suggestion-apply')?.addEventListener('click', () => {
   const pending = getPendingSuggestion()
   if (pending) {
     applyTemplate(pending.recipe)
-    // Update the dropdown to reflect the applied template
     const sel = document.getElementById('template-select')
     if (sel) sel.value = pending.recipe.id
   }
@@ -115,7 +115,7 @@ document.getElementById('suggestion-dismiss')?.addEventListener('click', () => {
   hideTemplateSuggestion()
 })
 
-// ─── Coffee Input ─────────────────────────────────────────────────────────────
+// ─── Coffee Input ──────────────────────────────────────────────────────────────
 
 document.getElementById('coffee-input').addEventListener('input', (e) => {
   const val = parseFloat(e.target.value)
@@ -127,7 +127,7 @@ document.getElementById('coffee-input').addEventListener('input', (e) => {
   }
 })
 
-// ─── Water Input ──────────────────────────────────────────────────────────────
+// ─── Water Input ─────────────────────────────────────────────────────────────
 
 document.getElementById('water-input').addEventListener('input', (e) => {
   const val = parseFloat(e.target.value)
@@ -139,7 +139,7 @@ document.getElementById('water-input').addEventListener('input', (e) => {
   }
 })
 
-// ─── Ratio Input + Apply ──────────────────────────────────────────────────────
+// ─── Ratio Input + Apply ────────────────────────────────────────────────────
 
 document.getElementById('ratio-apply-btn').addEventListener('click', () => {
   const ratio_new = parseFloat(document.getElementById('ratio-input').value)
@@ -166,7 +166,7 @@ document.getElementById('ratio-input').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') document.getElementById('ratio-apply-btn').click()
 })
 
-// ─── Temperature ──────────────────────────────────────────────────────────────
+// ─── Temperature ─────────────────────────────────────────────────────────────────
 
 document.getElementById('temp-input').addEventListener('input', (e) => {
   const val = parseFloat(e.target.value)
@@ -181,7 +181,7 @@ document.getElementById('temp-unit-toggle').addEventListener('click', () => {
   renderParams()
 })
 
-// ─── Brew Time ────────────────────────────────────────────────────────────────
+// ─── Brew Time ─────────────────────────────────────────────────────────────────
 
 function _applyTime(raw, reformat = false) {
   const sec = parseTime(raw)
@@ -198,10 +198,24 @@ document.getElementById('time-input').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') _applyTime(e.target.value.trim(), true)
 })
 
-// ─── Modal ────────────────────────────────────────────────────────────────────
+// ─── Pour Technique Selector (V60) ───────────────────────────────────────────────
+
+document.querySelectorAll('.technique-card[data-technique]').forEach(card => {
+  card.addEventListener('click', () => {
+    const tech = card.dataset.technique
+    const newTech = state.pour_technique === tech ? null : tech
+    setState({ pour_technique: newTech })
+    document.querySelectorAll('.technique-card[data-technique]').forEach(c => {
+      c.classList.toggle('active', c.dataset.technique === newTech)
+    })
+    renderSteps()
+  })
+})
+
+// ─── Modal ─────────────────────────────────────────────────────────────────
 
 initModal()
 
-// ─── Init ─────────────────────────────────────────────────────────────────────
+// ─── Init ────────────────────────────────────────────────────────────────────
 
 renderAll()

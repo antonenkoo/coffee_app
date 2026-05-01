@@ -87,7 +87,10 @@
       <div class="param-row">
         <label for="time-input">Brew Time</label>
         <div class="param-input-wrap">
+          <!-- iOS native time wheel via <input type="time"> wrapped in custom trigger -->
           <input id="time-input" type="text" placeholder="3:00" inputmode="numeric">
+          <input id="time-input-native" type="time" step="1"
+                 style="position:absolute;opacity:0;pointer-events:none;width:1px;height:1px;">
           <span class="unit">min</span>
           <span id="time-ghost" class="param-ghost hidden"></span>
         </div>
@@ -106,22 +109,22 @@
 
     </section>
 
-    <!-- Pouring Techniques (V60, no template) -->
+    <!-- Pouring Techniques (V60 only) -->
     <section id="techniques-section" class="hidden">
-      <div class="techniques-header">Техники пролива</div>
+      <div class="techniques-header">Техника пролива</div>
       <div class="techniques-list">
-        <div class="technique-card">
-          <span class="technique-name">3-пролива</span>
-          <span class="technique-desc">Блум → 60% воды → 100%. Классический контроль экстракции по этапам.</span>
-        </div>
-        <div class="technique-card">
+        <button class="technique-card" data-technique="3-pour">
+          <span class="technique-name">3 пролива</span>
+          <span class="technique-desc">Блум → 60% воды → 100%. Классический контроль экстракции.</span>
+        </button>
+        <button class="technique-card" data-technique="1-pour">
           <span class="technique-name">Один пролив</span>
           <span class="technique-desc">Все воды одним непрерывным потоком после блума. Метод Хоффманна.</span>
-        </div>
-        <div class="technique-card technique-card--accent">
+        </button>
+        <button class="technique-card technique-card--accent" data-technique="46">
           <span class="technique-name">4:6 метод</span>
-          <span class="technique-desc">40% → 3×20%. Победитель World Brewers Cup 2016. Точное управление вкусом.</span>
-        </div>
+          <span class="technique-desc">40% → 3×20%. Победитель World Brewers Cup 2016. Точный контроль вкуса.</span>
+        </button>
       </div>
     </section>
 
@@ -175,6 +178,46 @@
     </div>
   </div>
 
+  <!-- Footer with version link -->
+  <footer id="app-footer">
+    <a href="changelog.html" id="version-link">v1.1</a>
+  </footer>
+
   <script type="module" src="app.js"></script>
+  <script>
+    // iOS native time picker
+    const timeInput = document.getElementById('time-input')
+    const nativeTime = document.getElementById('time-input-native')
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+
+    if (isIOS && timeInput && nativeTime) {
+      // On iOS tap -> open native wheel
+      timeInput.addEventListener('focus', (e) => {
+        e.preventDefault()
+        timeInput.blur()
+        nativeTime.style.pointerEvents = 'auto'
+        nativeTime.focus()
+        nativeTime.click()
+      })
+
+      nativeTime.addEventListener('change', () => {
+        const val = nativeTime.value // "03:30" or "03:30:00"
+        if (!val) return
+        const parts = val.split(':')
+        const m = parseInt(parts[0], 10)
+        const s = parseInt(parts[1] || '0', 10)
+        // format as M:SS display
+        const display = `${m}:${String(s).padStart(2, '0')}`
+        timeInput.value = display
+        // trigger app logic
+        timeInput.dispatchEvent(new Event('input', { bubbles: true }))
+        nativeTime.style.pointerEvents = 'none'
+      })
+
+      nativeTime.addEventListener('blur', () => {
+        nativeTime.style.pointerEvents = 'none'
+      })
+    }
+  </script>
 </body>
 </html>
