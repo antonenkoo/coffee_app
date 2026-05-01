@@ -14,11 +14,14 @@
 
   <main>
 
-    <!-- Method Selector -->
-    <section id="method-selector">
-      <button class="method-btn active" data-method="v60">V60</button>
-      <button class="method-btn" data-method="aeropress">AeroPress</button>
-    </section>
+    <!-- Method Selector + Reset -->
+    <div class="method-row">
+      <section id="method-selector">
+        <button class="method-btn active" data-method="v60">V60</button>
+        <button class="method-btn" data-method="aeropress">AeroPress</button>
+      </section>
+      <button id="reset-btn" title="Сбросить к дефолтам">↺</button>
+    </div>
 
     <!-- Recipe Template Selector -->
     <div id="template-row">
@@ -49,50 +52,67 @@
 
       <div class="param-row">
         <label for="coffee-input">Coffee</label>
-        <div class="param-input-wrap">
-          <input id="coffee-input" type="number" step="0.5" min="5" max="100">
-          <span class="unit">g</span>
-          <span id="coffee-ghost" class="param-ghost hidden"></span>
+        <div class="param-field">
+          <div class="param-input-wrap">
+            <input id="coffee-input" type="number" step="0.5" min="5" max="100">
+            <span class="unit">g</span>
+            <span id="coffee-ghost" class="param-ghost hidden"></span>
+          </div>
+          <span class="field-error hidden" id="coffee-error"></span>
         </div>
       </div>
 
       <div class="param-row">
         <label for="water-input">Water</label>
-        <div class="param-input-wrap">
-          <input id="water-input" type="number" step="5" min="50" max="1000">
-          <span class="unit">g</span>
-          <span id="water-ghost" class="param-ghost hidden"></span>
+        <div class="param-field">
+          <div class="param-input-wrap">
+            <input id="water-input" type="number" step="5" min="50" max="1000">
+            <span class="unit">g</span>
+            <span id="water-ghost" class="param-ghost hidden"></span>
+          </div>
+          <span class="field-error hidden" id="water-error"></span>
         </div>
       </div>
 
       <div class="param-row ratio-row">
         <label for="ratio-input">Brew Ratio</label>
-        <div class="param-input-wrap ratio-wrap">
-          <span class="ratio-prefix">1:</span>
-          <input id="ratio-input" type="number" step="0.1" min="8" max="20">
-          <button id="ratio-apply-btn" title="Apply new ratio">Apply</button>
-          <span id="ratio-ghost" class="param-ghost hidden"></span>
+        <div class="param-field">
+          <div class="param-input-wrap ratio-wrap">
+            <span class="ratio-prefix">1:</span>
+            <input id="ratio-input" type="number" step="0.1" min="8" max="20">
+            <button id="ratio-apply-btn" title="Apply new ratio">Apply</button>
+            <span id="ratio-ghost" class="param-ghost hidden"></span>
+          </div>
+          <span class="field-error hidden" id="ratio-error"></span>
         </div>
       </div>
 
       <div class="param-row">
         <label for="temp-input">Temperature</label>
-        <div class="param-input-wrap">
-          <input id="temp-input" type="number" step="1">
-          <button id="temp-unit-toggle" class="unit-toggle">°C</button>
-          <span id="temp-ghost" class="param-ghost hidden"></span>
+        <div class="param-field">
+          <div class="param-input-wrap">
+            <input id="temp-input" type="number" step="1">
+            <button id="temp-unit-toggle" class="unit-toggle">°C</button>
+            <span id="temp-ghost" class="param-ghost hidden"></span>
+          </div>
+          <span class="field-error hidden" id="temp-error"></span>
+          <span class="field-hint hidden" id="temp-hint"></span>
         </div>
       </div>
 
       <div class="param-row">
         <label for="time-input">Brew Time</label>
-        <div class="param-input-wrap">
-          <!-- iOS native time wheel via <input type="time"> wrapped in custom trigger -->
-          <input id="time-input" type="text" placeholder="3:00" inputmode="numeric">
-          <input id="time-input-native" type="time" step="1"
-                 style="position:absolute;opacity:0;pointer-events:none;width:1px;height:1px;">
-          <span class="unit">min</span>
-          <span id="time-ghost" class="param-ghost hidden"></span>
+        <div class="param-field">
+          <div class="param-input-wrap">
+            <!-- iOS native time wheel via <input type="time"> wrapped in custom trigger -->
+            <input id="time-input" type="text" placeholder="3:00" inputmode="numeric">
+            <input id="time-input-native" type="time" step="1"
+                   style="position:absolute;opacity:0;pointer-events:none;width:1px;height:1px;">
+            <span class="unit">min</span>
+            <span id="time-ghost" class="param-ghost hidden"></span>
+          </div>
+          <span class="field-error hidden" id="time-error"></span>
+          <span class="field-hint hidden" id="time-hint"></span>
         </div>
       </div>
 
@@ -127,6 +147,11 @@
         </button>
       </div>
     </section>
+
+    <!-- BREW Button -->
+    <div id="brew-section">
+      <button id="brew-btn">▶&nbsp;&nbsp;BREW</button>
+    </div>
 
     <!-- Warnings -->
     <section id="warnings"></section>
@@ -180,7 +205,7 @@
 
   <!-- Footer with version link -->
   <footer id="app-footer">
-    <a href="changelog.html" id="version-link">v1.1</a>
+    <a href="changelog.html" id="version-link">v1.3</a>
   </footer>
 
   <script type="module" src="app.js"></script>

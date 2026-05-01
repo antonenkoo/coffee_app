@@ -7,7 +7,7 @@ import { getTips }        from './tips.js'
 import { V60 }            from '../data/v60.js'
 import { AEROPRESS }      from '../data/aeropress.js'
 import { getRecipeById, getRecipesForMethod } from './RecipeService.js'
-import { calcGrind, calcOptimalTemp, calcOptimalTime } from './CalculationEngine.js'
+import { calcGrind, calcGrindRange, calcOptimalTemp, calcOptimalTime } from './CalculationEngine.js'
 
 export function getMethodData() {
   return state.method === 'v60' ? V60 : AEROPRESS
@@ -34,6 +34,7 @@ export function renderDynamic() {
   renderGrind()
   renderImpossible()
   renderTemplateGhosts()
+  renderHints()
 }
 
 // ─── Param fields ─────────────────────────────────────────────────────────────
@@ -153,22 +154,29 @@ export function getPendingSuggestion() {
 
 // ─── Techniques (no template selected) ───────────────────────────────────────
 
-/** Show pouring-technique cards only when no template is active (V60 only). */
+/** Show pouring-technique cards for V60 (always, regardless of template). */
 export function renderTechniques() {
   const el = document.getElementById('techniques-section')
   if (!el) return
-  const show = state.template === null && state.method === 'v60'
-  el.classList.toggle('hidden', !show)
+  el.classList.toggle('hidden', state.method !== 'v60')
 }
 
 // ─── Grind Display ────────────────────────────────────────────────────────────
 
 export function renderGrind() {
-  const { microns, clicks } = calcGrind(state.method, state.ratio, state.brew_time_sec)
   const mEl = document.getElementById('grind-microns')
   const cEl = document.getElementById('grind-clicks')
-  if (mEl) mEl.textContent = microns
-  if (cEl) cEl.textContent = clicks
+  if (!mEl || !cEl) return
+
+  if (!state.template) {
+    const { minMicrons, maxMicrons, minClicks, maxClicks } = calcGrindRange(state.method)
+    mEl.textContent = `${minMicrons}–${maxMicrons}`
+    cEl.textContent = `${minClicks}–${maxClicks}`
+  } else {
+    const { microns, clicks } = calcGrind(state.method, state.ratio, state.brew_time_sec)
+    mEl.textContent = microns
+    cEl.textContent = clicks
+  }
 }
 
 // ─── Recommended Parameters ───────────────────────────────────────────────────
@@ -234,6 +242,36 @@ export function renderSteps() {
         ${s.note ? `<span class="step-note">${s.note}</span>` : ''}
       </div>
     </li>`).join('')
+}
+
+// ─── Field Hints ─────────────────────────────────────────────────────────────
+
+/** Shows subtle gray hints below temp and time when values deviate from optimal. */
+export function renderHints() {
+  const optTemp = calcOptimalTemp(state.method, state.ratio, state.coffee_g)
+  const optTime = calcOptimalTime(state.method, state.ratio, state.coffee_g)
+
+  const tempHint = document.getElementById('temp-hint')
+  if (tempHint) {
+    const show = Math.abs(state.temp_c - optTemp) > 2
+    if (show) {
+      const displayTemp = state.temp_unit === 'C' ? optTemp : Math.round(optTemp * 9 / 5 + 32)
+      const unit = state.temp_unit === 'C' ? '°C' : '°F'
+      tempHint.textContent = `оптимально: ${displayTemp}${unit}`
+    }
+    tempHint.classList.toggle('hidden', !show)
+  }
+
+  const timeHint = document.getElementById('time-hint')
+  if (timeHint) {
+    const show = Math.abs(state.brew_time_sec - optTime) > 20
+    if (show) {
+      const lo = formatTime(Math.max(60, optTime - 15))
+      const hi = formatTime(optTime + 15)
+      timeHint.textContent = `рекомендуем: ${lo}–${hi}`
+    }
+    timeHint.classList.toggle('hidden', !show)
+  }
 }
 
 // ─── Tips ─────────────────────────────────────────────────────────────────────

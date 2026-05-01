@@ -883,6 +883,107 @@ main {
   display: none !important;
 }
 
+/* ─── Method Row (selector + reset) ─────────────────────────────────────── */
+.method-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.method-row #method-selector {
+  flex: 1;
+}
+
+#reset-btn {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-s);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+#reset-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ─── Param Field (column wrapper for input + error + hint) ────────────── */
+.param-row {
+  align-items: flex-start;  /* allow sub-content below input */
+}
+
+.param-row label {
+  padding-top: 8px;  /* align label text with input */
+}
+
+.param-field {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+/* ─── Validation ─────────────────────────────────────────────────────────── */
+.input--invalid {
+  border-color: #c0392b !important;
+  background: rgba(192, 57, 43, 0.08) !important;
+}
+
+.input--invalid:focus {
+  border-color: #e74c3c !important;
+}
+
+.field-error {
+  font-size: 0.75rem;
+  color: #c0392b;
+  text-align: right;
+  line-height: 1.3;
+}
+
+/* ─── Field Hints ─────────────────────────────────────────────────────────── */
+.field-hint {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  text-align: right;
+  font-style: italic;
+  line-height: 1.3;
+}
+
+/* ─── BREW Button ────────────────────────────────────────────────────────── */
+#brew-section {
+  display: flex;
+  justify-content: center;
+}
+
+#brew-btn {
+  padding: 15px 52px;
+  background: var(--accent);
+  border: none;
+  border-radius: 32px;
+  color: var(--bg);
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+  box-shadow: 0 4px 20px rgba(232, 213, 176, 0.18);
+  font-family: inherit;
+}
+
+#brew-btn:hover {
+  background: var(--accent-hover);
+  box-shadow: 0 4px 28px rgba(232, 213, 176, 0.28);
+}
+
+#brew-btn:active {
+  transform: scale(0.97);
+}
+
 /* ─── Mobile adjustments ─────────────────────────────────────────────────── */
 @media (max-width: 400px) {
   header h1 { font-size: 1.25rem; }

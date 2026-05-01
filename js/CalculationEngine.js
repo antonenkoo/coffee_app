@@ -67,6 +67,21 @@ export function calcOptimalTime(method, ratio, coffee_g) {
   }
 }
 
+// ─── Grind Range (no recipe selected) ────────────────────────────────────────
+
+const _GRIND_IDEAL = {
+  v60:       { min_ratio: 15, max_ratio: 17, brew_time: 180 },
+  aeropress: { min_ratio: 11, max_ratio: 14, brew_time: 120 },
+}
+
+/** Returns {minMicrons, maxMicrons, minClicks, maxClicks} for the method's ideal ratio range. */
+export function calcGrindRange(method) {
+  const r = _GRIND_IDEAL[method] ?? _GRIND_IDEAL.v60
+  const lo = calcGrind(method, r.min_ratio, r.brew_time)
+  const hi = calcGrind(method, r.max_ratio, r.brew_time)
+  return { minMicrons: lo.microns, maxMicrons: hi.microns, minClicks: lo.clicks, maxClicks: hi.clicks }
+}
+
 // ─── Feasibility ─────────────────────────────────────────────────────────────
 
 /**

@@ -15,6 +15,7 @@ import { V60 }       from './data/v60.js'
 import { AEROPRESS } from './data/aeropress.js'
 import { findMatchingRecipe, getRecipeById } from './js/RecipeService.js'
 import { checkIsPossible } from './js/CalculationEngine.js'
+import { getBrewSteps } from './js/steps.js'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -52,25 +53,67 @@ function applyTemplate(recipe) {
   renderAll()
 }
 
+// ─── Validation ─────────────────────────────────────────────────────────────
+
+function setFieldError(name, msg) {
+  const inputEl = document.getElementById(`${name}-input`)
+  const errorEl = document.getElementById(`${name}-error`)
+  const hasError = !!msg
+  if (inputEl) inputEl.classList.toggle('input--invalid', hasError)
+  if (errorEl) {
+    errorEl.textContent = msg ?? ''
+    errorEl.classList.toggle('hidden', !hasError)
+  }
+}
+
 // ─── Method Switch ─────────────────────────────────────────────────────────────
 
 document.querySelectorAll('.method-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     const method = btn.dataset.method
+    if (method === state.method) return
+
+    const methodData = method === 'v60' ? V60 : AEROPRESS
+    const r = methodData.ranges
+
+    // Preserve coffee_g + ratio; recalculate water; clip to new method's ranges
+    const coffee_g = Math.max(r.coffee_g.min, Math.min(r.coffee_g.max, state.coffee_g))
+    const ratio    = Math.max(r.ratio.min,    Math.min(r.ratio.max,    state.ratio))
+    const water_g  = Math.max(r.water_g.min,  Math.min(r.water_g.max,  Math.round(coffee_g * ratio)))
+
     setState({
       method,
       template: null, templateOrigin: null,
       pour_technique: null,
-      ...(method === 'v60' ? V60 : AEROPRESS).defaults,
+      temp_c:        methodData.defaults.temp_c,
+      brew_time_sec: methodData.defaults.brew_time_sec,
+      coffee_g, ratio, water_g,
     })
     _dismissedSuggestionId = null
     hideTemplateSuggestion()
-    // Reset active technique cards
     document.querySelectorAll('.technique-card[data-technique]').forEach(c =>
       c.classList.remove('active')
     )
     renderAll()
   })
+})
+
+// ─── Reset ───────────────────────────────────────────────────────────────────
+
+document.getElementById('reset-btn')?.addEventListener('click', () => {
+  const methodData = state.method === 'v60' ? V60 : AEROPRESS
+  setState({
+    ...methodData.defaults,
+    template: null, templateOrigin: null,
+    pour_technique: null,
+  })
+  localStorage.clear()
+  _dismissedSuggestionId = null
+  hideTemplateSuggestion()
+  document.querySelectorAll('.technique-card[data-technique]').forEach(c =>
+    c.classList.remove('active')
+  )
+  renderAll()
 })
 
 // ─── AeroPress Style Toggle ──────────────────────────────────────────────────
@@ -119,37 +162,52 @@ document.getElementById('suggestion-dismiss')?.addEventListener('click', () => {
 
 document.getElementById('coffee-input').addEventListener('input', (e) => {
   const val = parseFloat(e.target.value)
-  if (!isNaN(val) && val > 0) {
-    const ratio = calcRatio(val, state.water_g)
-    setState({ coffee_g: val, ratio })
-    document.getElementById('ratio-input').value = round(ratio, 1)
-    _afterChange()
+  if (isNaN(val) || val < 5 || val > 100) {
+    setFieldError('coffee', 'от 5 до 100 г')
+    return
   }
+  setFieldError('coffee', null)
+  const ratio = calcRatio(val, state.water_g)
+  setState({ coffee_g: val, ratio })
+  document.getElementById('ratio-input').value = round(ratio, 1)
+  _afterChange()
 })
 
 // ─── Water Input ─────────────────────────────────────────────────────────────
 
 document.getElementById('water-input').addEventListener('input', (e) => {
   const val = parseFloat(e.target.value)
-  if (!isNaN(val) && val > 0) {
-    const ratio = calcRatio(state.coffee_g, val)
-    setState({ water_g: val, ratio })
-    document.getElementById('ratio-input').value = round(ratio, 1)
-    _afterChange()
+  if (isNaN(val) || val < 50 || val > 1000) {
+    setFieldError('water', 'от 50 до 1000 г')
+    return
   }
+  setFieldError('water', null)
+  const ratio = calcRatio(state.coffee_g, val)
+  setState({ water_g: val, ratio })
+  document.getElementById('ratio-input').value = round(ratio, 1)
+  _afterChange()
 })
 
 // ─── Ratio Input + Apply ────────────────────────────────────────────────────
 
-document.getElementById('ratio-apply-btn').addEventListener('click', () => {
+let _ratioModalOpen = false
+
+function _openRatioModal() {
+  if (_ratioModalOpen) return
   const ratio_new = parseFloat(document.getElementById('ratio-input').value)
-  if (isNaN(ratio_new) || ratio_new <= 0) return
+  if (isNaN(ratio_new) || ratio_new < 8 || ratio_new > 20) {
+    setFieldError('ratio', 'от 8 до 20')
+    return
+  }
+  setFieldError('ratio', null)
   if (Math.abs(ratio_new - state.ratio) < 0.05) return
 
   const ratio_old = state.ratio
   setState({ pendingRatio: ratio_new })
+  _ratioModalOpen = true
 
   openRatioModal(ratio_old, ratio_new, (mode) => {
+    _ratioModalOpen = false
     const result = adjustForNewRatio(state.coffee_g, state.water_g, ratio_old, ratio_new, mode)
     setState({
       coffee_g: round(result.coffee_g, 2),
@@ -160,18 +218,30 @@ document.getElementById('ratio-apply-btn').addEventListener('click', () => {
     renderAll()
     _checkSuggestion()
   })
+}
+
+document.getElementById('ratio-apply-btn').addEventListener('click', _openRatioModal)
+
+document.getElementById('ratio-input').addEventListener('blur', () => {
+  // Auto-open modal on blur if value changed
+  _openRatioModal()
 })
 
 document.getElementById('ratio-input').addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') document.getElementById('ratio-apply-btn').click()
+  if (e.key === 'Enter') _openRatioModal()
 })
 
 // ─── Temperature ─────────────────────────────────────────────────────────────────
 
 document.getElementById('temp-input').addEventListener('input', (e) => {
-  const val = parseFloat(e.target.value)
-  if (isNaN(val)) return
-  const temp_c = state.temp_unit === 'C' ? val : fahrenheitToCelsius(val)
+  const raw = parseFloat(e.target.value)
+  if (isNaN(raw)) return
+  const temp_c = state.temp_unit === 'C' ? raw : fahrenheitToCelsius(raw)
+  if (temp_c < 70 || temp_c > 100) {
+    setFieldError('temp', 'от 70 до 100°C')
+    return
+  }
+  setFieldError('temp', null)
   setState({ temp_c: round(temp_c, 1) })
   _afterChange()
 })
@@ -185,11 +255,14 @@ document.getElementById('temp-unit-toggle').addEventListener('click', () => {
 
 function _applyTime(raw, reformat = false) {
   const sec = parseTime(raw)
-  if (!isNaN(sec) && sec > 0) {
-    setState({ brew_time_sec: sec })
-    if (reformat) document.getElementById('time-input').value = formatTime(sec)
-    _afterChange()
+  if (isNaN(sec) || sec <= 0) {
+    setFieldError('time', 'введите время > 0')
+    return
   }
+  setFieldError('time', null)
+  setState({ brew_time_sec: sec })
+  if (reformat) document.getElementById('time-input').value = formatTime(sec)
+  _afterChange()
 }
 
 document.getElementById('time-input').addEventListener('input',   (e) => _applyTime(e.target.value))
@@ -203,6 +276,22 @@ document.getElementById('time-input').addEventListener('keydown', (e) => {
 document.querySelectorAll('.technique-card[data-technique]').forEach(card => {
   card.addEventListener('click', () => {
     const tech = card.dataset.technique
+
+    // Confirm if a template is active
+    if (state.template !== null) {
+      const recipe = getRecipeById(state.template)
+      const name = recipe?.name ?? 'текущий рецепт'
+      const ok = confirm(
+        `Смена техники изменит шаги — это уже не оригинальный рецепт «${name}». Продолжить?`
+      )
+      if (!ok) return
+      setState({ template: null, templateOrigin: null })
+      const sel = document.getElementById('template-select')
+      if (sel) sel.value = ''
+      hideTemplateSuggestion()
+      renderTemplateDescription(null)
+    }
+
     const newTech = state.pour_technique === tech ? null : tech
     setState({ pour_technique: newTech })
     document.querySelectorAll('.technique-card[data-technique]').forEach(c => {
@@ -210,6 +299,24 @@ document.querySelectorAll('.technique-card[data-technique]').forEach(card => {
     })
     renderSteps()
   })
+})
+
+// ─── Brew Button ─────────────────────────────────────────────────────────────
+
+document.getElementById('brew-btn')?.addEventListener('click', () => {
+  const brewSteps = getBrewSteps(state)
+  sessionStorage.setItem('brewState', JSON.stringify({
+    method:          state.method,
+    coffee_g:        state.coffee_g,
+    water_g:         state.water_g,
+    ratio:           state.ratio,
+    temp_c:          state.temp_c,
+    brew_time_sec:   state.brew_time_sec,
+    pour_technique:  state.pour_technique,
+    aeropress_style: state.aeropress_style,
+    brewSteps,
+  }))
+  window.location.href = 'brew.html'
 })
 
 // ─── Modal ─────────────────────────────────────────────────────────────────

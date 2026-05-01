@@ -1,6 +1,104 @@
 // js/steps.js
 import { formatTime } from './calculator.js'
 
+// ─── Brew Mode Steps ─────────────────────────────────────────────────────────
+// Returns steps with start_sec for brew.html auto-advance.
+// start_sec: null = prep step (shown before countdown)
+// start_sec: N    = triggered when timer reaches N seconds
+
+export function getBrewSteps(state) {
+  const { method, coffee_g, water_g, temp_c, brew_time_sec, aeropress_style, pour_technique } = state
+  if (method === 'v60') return _brewV60(coffee_g, water_g, temp_c, brew_time_sec, pour_technique)
+  return _brewAeropress(coffee_g, water_g, temp_c, aeropress_style, brew_time_sec)
+}
+
+function _brewV60(coffee_g, water_g, temp_c, brew_time_sec, technique) {
+  switch (technique) {
+    case '1-pour': return _brewV60OnePour(coffee_g, water_g, temp_c, brew_time_sec)
+    case '46':     return _brewV60FourSix(coffee_g, water_g, temp_c, brew_time_sec)
+    default:       return _brewV60ThreePour(coffee_g, water_g, temp_c, brew_time_sec)
+  }
+}
+
+function _brewV60ThreePour(coffee_g, water_g, temp_c, brew_time_sec) {
+  const bloom_g   = Math.round(coffee_g * 2)
+  const bloom_sec = 45
+  const scale     = Math.max(0.7, Math.min(1.6, brew_time_sec / 180))
+  const pour2_sec = bloom_sec + Math.round(28 * scale)
+  const drain_sec = pour2_sec + 25
+  const pour1_g   = Math.round(water_g * 0.6)
+  const tempNote  = temp_c < 89 ? 'Продлите ожидание до 50–55 сек' : temp_c > 94 ? '35–40 сек достаточно' : null
+
+  return [
+    { start_sec: 0,             action: `Bloom: влить <b>${bloom_g}г</b>, перемешать — ждать 45 сек`, note: tempNote },
+    { start_sec: bloom_sec,     action: `Пролив 1: долить до <b>${pour1_g}г</b> — круговая струя от центра`, note: `${temp_c}°C` },
+    { start_sec: pour2_sec,     action: `Пролив 2: долить до <b>${water_g}г</b> — спираль снаружи к центру`, note: null },
+    { start_sec: drain_sec,     action: 'Дренаж — не трогать V60', note: null },
+    { start_sec: brew_time_sec, action: 'Покрутить V60 ☕', note: null },
+  ]
+}
+
+function _brewV60OnePour(coffee_g, water_g, temp_c, brew_time_sec) {
+  const bloom_g   = Math.round(coffee_g * 2)
+  const bloom_sec = 45
+  const pour_end  = Math.round(brew_time_sec * 0.5)
+
+  return [
+    { start_sec: 0,             action: `Bloom: влить <b>${bloom_g}г</b>, перемешать — ждать 45 сек`, note: null },
+    { start_sec: bloom_sec,     action: `Непрерывный пролив: влить все <b>${water_g}г</b>`, note: `Лейте до ${formatTime(pour_end)} — метод Hoffmann` },
+    { start_sec: pour_end,      action: 'Дренаж — не трогать', note: null },
+    { start_sec: brew_time_sec, action: 'Покрутить V60 ☕', note: null },
+  ]
+}
+
+function _brewV60FourSix(coffee_g, water_g, temp_c, brew_time_sec) {
+  const first40    = Math.round(water_g * 0.40)
+  const remaining60 = water_g - first40
+  const each20     = Math.round(remaining60 / 3)
+  const interval   = Math.round(brew_time_sec / 5)
+  const t1 = interval, t2 = interval * 2, t3 = interval * 3, t4 = interval * 4
+  const cum1 = Math.round(first40 * 0.6)
+
+  return [
+    { start_sec: 0,             action: `Пролив 1: влить <b>${cum1}г</b> — кислотный баланс`, note: 'Больше воды → меньше кислотности' },
+    { start_sec: t1,            action: `Пролив 2: долить до <b>${first40}г</b> — сладость`, note: 'Больше воды → больше сладости' },
+    { start_sec: t2,            action: `Пролив 3: долить до <b>${first40 + each20}г</b>`, note: null },
+    { start_sec: t3,            action: `Пролив 4: долить до <b>${first40 + each20 * 2}г</b>`, note: null },
+    { start_sec: t4,            action: `Пролив 5: долить до <b>${water_g}г</b> (финал)`, note: null },
+    { start_sec: brew_time_sec, action: 'Дренаж завершён ☕', note: null },
+  ]
+}
+
+function _brewAeropress(coffee_g, water_g, temp_c, style, brew_time_sec) {
+  const press_sec  = 30
+  const steep_sec  = Math.max(30, brew_time_sec - press_sec)
+  const done_sec   = steep_sec + press_sec
+
+  if (style === 'inverted') {
+    const filter_sec = Math.max(steep_sec - 10, Math.round(steep_sec * 0.88))
+    return [
+      { start_sec: null,        action: 'Перевернуть AeroPress поршнем вниз (1 см внутри)', note: null },
+      { start_sec: null,        action: `Засыпать <b>${coffee_g}г</b> кофе (средний помол)`, note: null },
+      { start_sec: null,        action: `Залить <b>${water_g}г</b> воды (${temp_c}°C), перемешать 10 сек`, note: null },
+      { start_sec: 0,           action: `Настаивание — ${formatTime(steep_sec)}`, note: 'Не перемешивайте' },
+      { start_sec: filter_sec,  action: 'Установить фильтр, смочить кипятком', note: null },
+      { start_sec: steep_sec,   action: 'Перевернуть на кружку, медленно давить 30 сек', note: 'Остановитесь на шипении' },
+      { start_sec: done_sec,    action: '☕ Готово!', note: null },
+    ]
+  }
+
+  const insert_sec = 30
+  return [
+    { start_sec: null,       action: 'Установить фильтр, прогреть кипятком, слить воду', note: null },
+    { start_sec: null,       action: `Засыпать <b>${coffee_g}г</b> кофе (средний помол)`, note: null },
+    { start_sec: null,       action: `Залить <b>${water_g}г</b> воды (${temp_c}°C), перемешать 10 сек`, note: null },
+    { start_sec: 0,          action: `Настаивание — ${formatTime(steep_sec)}`, note: null },
+    { start_sec: insert_sec, action: 'Вставить поршень, создать вакуум', note: null },
+    { start_sec: steep_sec,  action: 'Медленно давить поршень 30 сек', note: 'Остановитесь на шипении' },
+    { start_sec: done_sec,   action: '☕ Готово!', note: null },
+  ]
+}
+
 /**
  * Single entry point. Returns step array for current state.
  * Each step: { time, action, note }

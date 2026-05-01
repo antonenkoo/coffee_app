@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>☕ Brew</title>
+  <style>
+    :root {
+      --bg:     #0e0e0e;
+      --surface: #171717;
+      --accent: #e8d5b0;
+      --text:   #f5f5f5;
+      --muted:  #888888;
+      --dim:    #444444;
+      --border: rgba(255,255,255,0.07);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      overflow: hidden;
+    }
+
+    #brew-app {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100dvh;
+      padding: 24px 20px;
+      position: relative;
+    }
+
+    /* ── Stop button (top-left) ─────────── */
+    #stop-btn {
+      position: absolute;
+      top: 18px;
+      left: 18px;
+      width: 38px;
+      height: 38px;
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      background: transparent;
+      color: var(--muted);
+      font-size: 1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: border-color 0.15s, color 0.15s;
+      z-index: 10;
+    }
+    #stop-btn:hover { border-color: var(--text); color: var(--text); }
+
+    /* ── Method badge (top-right) ───────── */
+    #brew-method-badge {
+      position: absolute;
+      top: 24px;
+      right: 20px;
+      font-size: 0.7rem;
+      color: var(--dim);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    /* ── Phase containers ───────────────── */
+    .phase {
+      width: 100%;
+      max-width: 420px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+    .hidden { display: none !important; }
+
+    /* ══════════════ START PHASE ═══════════════ */
+    #phase-start { text-align: center; }
+
+    .brew-params-box {
+      width: 100%;
+      padding: 14px 18px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .brew-param {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.875rem;
+    }
+    .brew-param-label { color: var(--muted); }
+    .brew-param-value { color: var(--accent); font-weight: 500; font-variant-numeric: tabular-nums; }
+
+    /* Prep steps (AeroPress) */
+    #prep-wrap {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      text-align: left;
+    }
+    .prep-title {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      margin-bottom: 2px;
+    }
+    .prep-step {
+      display: flex;
+      gap: 10px;
+      padding: 8px 12px;
+      background: rgba(255,255,255,0.03);
+      border-radius: 8px;
+      font-size: 0.875rem;
+      align-items: flex-start;
+    }
+    .prep-step-num { color: var(--accent); font-weight: 600; flex-shrink: 0; width: 18px; }
+
+    /* Start button */
+    #start-btn {
+      padding: 15px 52px;
+      background: var(--accent);
+      border: none;
+      border-radius: 32px;
+      color: var(--bg);
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+    }
+    #start-btn:hover { background: #f0e0c0; }
+    #start-btn:active { transform: scale(0.96); }
+
+    /* ══════════════ COUNTDOWN PHASE ═══════════════ */
+    #phase-countdown { justify-content: center; }
+
+    #countdown-num {
+      font-size: 9rem;
+      font-weight: 800;
+      color: var(--accent);
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+      transition: opacity 0.12s;
+      text-align: center;
+      user-select: none;
+    }
+
+    /* ══════════════ BREW PHASE ═════════════════════ */
+    #phase-brew {
+      align-items: stretch;
+      gap: 0;
+    }
+
+    /* Progress bar (top of screen) */
+    #progress-wrap {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: rgba(255,255,255,0.07);
+      z-index: 5;
+    }
+    #progress-fill {
+      height: 100%;
+      background: var(--accent);
+      transition: width 1s linear;
+      width: 0%;
+    }
+
+    /* Large timer */
+    #brew-timer {
+      font-size: 7rem;
+      font-weight: 800;
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+      text-align: center;
+      line-height: 1;
+      letter-spacing: -0.02em;
+      padding: 20px 0 28px;
+    }
+
+    /* Current step */
+    #current-step-wrap {
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      padding: 0 8px 28px;
+      min-height: 130px;
+    }
+    #current-label {
+      font-size: 0.6rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--dim);
+    }
+    #current-action {
+      font-size: 1.45rem;
+      font-weight: 600;
+      color: var(--accent);
+      line-height: 1.35;
+    }
+    #current-action b { color: var(--text); }
+    #current-note {
+      font-size: 0.8rem;
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    /* Next step */
+    #next-step-wrap {
+      text-align: center;
+      padding: 16px 12px 0;
+      border-top: 1px solid var(--border);
+    }
+    #next-label {
+      font-size: 0.55rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--dim);
+      margin-bottom: 5px;
+    }
+    #next-action {
+      font-size: 0.95rem;
+      color: var(--dim);
+      line-height: 1.4;
+    }
+    #next-action b { color: #555; }
+    #next-in {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 5px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ══════════════ DONE PHASE ═════════════════════ */
+    #phase-done { text-align: center; gap: 14px; }
+    #done-emoji { font-size: 4rem; }
+    #done-title { font-size: 2.2rem; font-weight: 700; color: var(--text); }
+    #done-time  { font-size: 1rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+    #back-btn {
+      margin-top: 12px;
+      padding: 12px 36px;
+      background: transparent;
+      border: 1px solid rgba(232,213,176,0.4);
+      border-radius: 28px;
+      color: var(--accent);
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    #back-btn:hover { background: rgba(232,213,176,0.08); border-color: var(--accent); }
+
+    @media (max-width: 380px) {
+      #brew-timer { font-size: 5.5rem; }
+      #current-action { font-size: 1.2rem; }
+      #countdown-num { font-size: 7rem; }
+    }
+  </style>
+</head>
+<body>
+<div id="brew-app">
+  <button id="stop-btn" title="Остановить">✕</button>
+  <div id="brew-method-badge"></div>
+
+  <!-- ── START PHASE ─────────────────────────── -->
+  <div id="phase-start" class="phase">
+    <div class="brew-params-box" id="brew-params-info"></div>
+    <div id="prep-wrap" class="hidden">
+      <div class="prep-title">Подготовка перед таймером:</div>
+      <div id="prep-list"></div>
+    </div>
+    <button id="start-btn">▶&nbsp;&nbsp;Начать заваривание</button>
+  </div>
+
+  <!-- ── COUNTDOWN PHASE ─────────────────────── -->
+  <div id="phase-countdown" class="phase hidden">
+    <div id="countdown-num">5</div>
+  </div>
+
+  <!-- ── BREW PHASE ──────────────────────────── -->
+  <div id="phase-brew" class="phase hidden">
+    <div id="progress-wrap"><div id="progress-fill"></div></div>
+    <div id="brew-timer">00:00</div>
+    <div id="current-step-wrap">
+      <div id="current-label">Текущий шаг</div>
+      <div id="current-action"></div>
+      <div id="current-note"></div>
+    </div>
+    <div id="next-step-wrap">
+      <div id="next-label">Следующий</div>
+      <div id="next-action"></div>
+      <div id="next-in"></div>
+    </div>
+  </div>
+
+  <!-- ── DONE PHASE ──────────────────────────── -->
+  <div id="phase-done" class="phase hidden">
+    <div id="done-emoji">☕</div>
+    <div id="done-title">Готово!</div>
+    <div id="done-time"></div>
+    <button id="back-btn">← На главную</button>
+  </div>
+</div>
+
+<script>
+// ── Read brew data from sessionStorage ───────────────────────────────────────
+const brewData = JSON.parse(sessionStorage.getItem('brewState') || 'null')
+if (!brewData) { window.location.href = 'index.html' }
+
+const { method, coffee_g, water_g, temp_c, ratio, brew_time_sec, brewSteps } = brewData
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function fmt(totalSec) {
+  const m = Math.floor(Math.abs(totalSec) / 60)
+  const s = Math.abs(totalSec) % 60
+  return `${m}:${String(s).padStart(2, '0')}`
+}
+
+// ── Audio + Vibration ────────────────────────────────────────────────────────
+let _audioCtx = null
+
+function playBeep(freq = 880, dur = 0.25) {
+  try {
+    if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)()
+    const osc  = _audioCtx.createOscillator()
+    const gain = _audioCtx.createGain()
+    osc.connect(gain)
+    gain.connect(_audioCtx.destination)
+    osc.frequency.value = freq
+    osc.type = 'sine'
+    gain.gain.setValueAtTime(0.25, _audioCtx.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.001, _audioCtx.currentTime + dur)
+    osc.start(_audioCtx.currentTime)
+    osc.stop(_audioCtx.currentTime + dur)
+  } catch (_) { /* no audio */ }
+}
+
+function vibrate(pattern = [200, 100, 200]) {
+  try { navigator.vibrate?.(pattern) } catch (_) {}
+}
+
+// ── Method badge ─────────────────────────────────────────────────────────────
+document.getElementById('brew-method-badge').textContent =
+  method === 'aeropress' ? 'AeroPress' : 'V60'
+
+// ── Params info box ──────────────────────────────────────────────────────────
+document.getElementById('brew-params-info').innerHTML = [
+  ['Кофе',        `${coffee_g}г`],
+  ['Вода',        `${water_g}г`],
+  ['Температура', `${temp_c}°C`],
+  ['Ratio',       `1:${(+ratio).toFixed(1)}`],
+  ['Время',       fmt(brew_time_sec)],
+].map(([l, v]) =>
+  `<div class="brew-param"><span class="brew-param-label">${l}</span><span class="brew-param-value">${v}</span></div>`
+).join('')
+
+// ── Separate prep (null) vs timer steps ──────────────────────────────────────
+const prepSteps   = brewSteps.filter(s => s.start_sec === null)
+const timerSteps  = brewSteps.filter(s => s.start_sec !== null)
+
+if (prepSteps.length > 0) {
+  document.getElementById('prep-wrap').classList.remove('hidden')
+  document.getElementById('prep-list').innerHTML = prepSteps.map((s, i) => `
+    <div class="prep-step">
+      <span class="prep-step-num">${i + 1}.</span>
+      <span>${s.action}</span>
+    </div>`).join('')
+}
+
+// ── Phase switching ──────────────────────────────────────────────────────────
+function showPhase(id) {
+  ['phase-start','phase-countdown','phase-brew','phase-done'].forEach(p =>
+    document.getElementById(p).classList.toggle('hidden', p !== id)
+  )
+}
+
+// ── Countdown ────────────────────────────────────────────────────────────────
+function startCountdown() {
+  showPhase('phase-countdown')
+  const numEl = document.getElementById('countdown-num')
+  let count = 5
+
+  const tick = () => {
+    numEl.textContent = count
+    numEl.style.opacity = '1'
+    if (count === 0) {
+      numEl.textContent = 'GO!'
+      numEl.style.fontSize = '5rem'
+      numEl.style.letterSpacing = '0.08em'
+      playBeep(660, 0.5)
+      vibrate([300])
+      setTimeout(startBrew, 800)
+      return
+    }
+    count--
+    setTimeout(() => {
+      numEl.style.opacity = '0'
+      setTimeout(tick, 150)
+    }, 850)
+  }
+  tick()
+}
+
+// ── Brew timer ───────────────────────────────────────────────────────────────
+let brewInterval  = null
+let elapsed       = 0
+let currentIdx    = -1
+
+function getCurrentIdx(sec) {
+  let idx = 0
+  for (let i = 0; i < timerSteps.length; i++) {
+    if (timerSteps[i].start_sec <= sec) idx = i
+    else break
+  }
+  return idx
+}
+
+function updateStepUI(idx) {
+  const step = timerSteps[idx]
+  const next = timerSteps[idx + 1]
+
+  document.getElementById('current-action').innerHTML = step.action
+
+  const noteEl = document.getElementById('current-note')
+  noteEl.textContent = step.note ?? ''
+  noteEl.style.display = step.note ? '' : 'none'
+
+  const nextWrap = document.getElementById('next-step-wrap')
+  if (next) {
+    document.getElementById('next-action').innerHTML = next.action
+    nextWrap.style.display = ''
+  } else {
+    nextWrap.style.display = 'none'
+  }
+}
+
+function startBrew() {
+  showPhase('phase-brew')
+  elapsed    = 0
+  currentIdx = 0
+  updateStepUI(0)
+
+  brewInterval = setInterval(() => {
+    elapsed++
+
+    // Timer + progress
+    document.getElementById('brew-timer').textContent = fmt(elapsed)
+    document.getElementById('progress-fill').style.width =
+      `${Math.min(100, (elapsed / brew_time_sec) * 100)}%`
+
+    // Step advance
+    const newIdx = getCurrentIdx(elapsed)
+    if (newIdx !== currentIdx) {
+      currentIdx = newIdx
+      updateStepUI(newIdx)
+      playBeep()
+      vibrate()
+
+      // Last step reached → finish after a brief pause
+      if (newIdx === timerSteps.length - 1) {
+        clearInterval(brewInterval)
+        setTimeout(() => showDone(elapsed), 3000)
+        return
+      }
+    }
+
+    // Update "next in" countdown
+    const next = timerSteps[currentIdx + 1]
+    if (next) {
+      const rem = next.start_sec - elapsed
+      document.getElementById('next-in').textContent =
+        rem > 0 ? `через ${fmt(rem)}` : 'сейчас!'
+    }
+  }, 1000)
+}
+
+function showDone(totalSec) {
+  clearInterval(brewInterval)
+  showPhase('phase-done')
+  document.getElementById('done-time').textContent =
+    `Время заваривания: ${fmt(totalSec)}`
+  // Victory beeps
+  playBeep(523, 0.18)
+  setTimeout(() => playBeep(659, 0.18), 220)
+  setTimeout(() => playBeep(784, 0.35), 440)
+  vibrate([100, 50, 100, 50, 300])
+}
+
+// ── Button handlers ──────────────────────────────────────────────────────────
+document.getElementById('start-btn').addEventListener('click', () => {
+  // Unlock AudioContext on user gesture (browser autoplay policy)
+  _audioCtx = new (window.AudioContext || window.webkitAudioContext)()
+  startCountdown()
+})
+
+document.getElementById('stop-btn').addEventListener('click', () => {
+  if (brewInterval) clearInterval(brewInterval)
+  window.location.href = 'index.html'
+})
+
+document.getElementById('back-btn').addEventListener('click', () => {
+  window.location.href = 'index.html'
+})
+</script>
+</body>
+</html>
