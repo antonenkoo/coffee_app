@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Записать рецепт</title>
+  <style>
+    :root {
+      --bg:          #0e0e0e;
+      --surface:     #171717;
+      --surface-2:   #1f1f1f;
+      --surface-3:   #272727;
+      --accent:      #e8d5b0;
+      --accent-hover:#f0e0c0;
+      --accent-dim:  rgba(232,213,176,0.1);
+      --text:        #f5f5f5;
+      --muted:       #888888;
+      --dim:         #444444;
+      --border:      rgba(255,255,255,0.07);
+      --warning:     #d4924a;
+      --radius:      12px;
+      --radius-s:    8px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ── Header ─────────────────────────────── */
+    header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      background: var(--bg);
+      z-index: 10;
+    }
+
+    #back-header-btn {
+      width: 34px; height: 34px;
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      background: transparent;
+      color: var(--muted);
+      font-size: 1rem;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    #back-header-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    header h1 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    /* ── Layout ─────────────────────────────── */
+    main {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 20px 16px 100px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* ── Section card ────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .card-title {
+      padding: 12px 16px 10px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* ── Form rows ───────────────────────────── */
+    .form-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      gap: 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .form-row:last-child { border-bottom: none; }
+
+    .form-label {
+      font-size: 0.875rem;
+      color: var(--text);
+      min-width: 90px;
+      flex-shrink: 0;
+    }
+
+    .form-input {
+      flex: 1;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-s);
+      color: var(--text);
+      font-size: 0.9rem;
+      font-family: inherit;
+      padding: 8px 10px;
+      outline: none;
+      text-align: right;
+      transition: border-color 0.15s;
+      max-width: 140px;
+    }
+    .form-input:focus { border-color: var(--accent); }
+    .form-input[type="text"] { text-align: left; max-width: 100%; }
+
+    .form-unit {
+      font-size: 0.8rem;
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+
+    /* Full-width text inputs */
+    .form-row--full {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
+    }
+    .form-row--full .form-label { min-width: auto; }
+    .form-row--full .form-input { max-width: 100%; text-align: left; }
+
+    /* Select */
+    select.form-input {
+      text-align: left;
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%239a8870' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      padding-right: 28px;
+    }
+
+    /* Textarea */
+    textarea.form-input {
+      resize: vertical;
+      min-height: 80px;
+      text-align: left;
+      max-width: 100%;
+      line-height: 1.5;
+    }
+
+    /* ── Taste sliders ───────────────────────── */
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .slider-row:last-child { border-bottom: none; }
+
+    .slider-label {
+      font-size: 0.85rem;
+      color: var(--text);
+      min-width: 76px;
+      flex-shrink: 0;
+    }
+
+    .slider-track {
+      flex: 1;
+      display: flex;
+      gap: 5px;
+      align-items: center;
+    }
+
+    .slider-pip {
+      flex: 1;
+      height: 6px;
+      border-radius: 3px;
+      background: var(--surface-3);
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .slider-pip.active { background: var(--accent); }
+
+    .slider-val {
+      font-size: 0.8rem;
+      color: var(--muted);
+      min-width: 16px;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ── Grinder conditional row ─────────────── */
+    #grind-clicks-row { display: none; }
+
+    /* ── Bottom save bar ─────────────────────── */
+    #save-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0; right: 0;
+      padding: 12px 16px;
+      background: var(--bg);
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: center;
+    }
+
+    #save-recipe-btn {
+      width: 100%;
+      max-width: 448px;
+      padding: 14px;
+      background: var(--accent);
+      border: none;
+      border-radius: 28px;
+      color: #0e0e0e;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    #save-recipe-btn:hover { background: var(--accent-hover); }
+    #save-recipe-btn:disabled {
+      background: var(--surface-3);
+      color: var(--dim);
+      cursor: not-allowed;
+    }
+
+    /* ── Share modal ─────────────────────────── */
+    #share-modal-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.75);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    #share-modal-overlay.visible { display: flex; }
+
+    #share-modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px 20px;
+      max-width: 380px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      text-align: center;
+    }
+
+    .share-icon { font-size: 2.5rem; }
+
+    #share-modal h2 {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    #share-modal p {
+      font-size: 0.875rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .share-modal-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    #do-share-btn {
+      padding: 12px;
+      background: var(--accent);
+      border: none;
+      border-radius: 24px;
+      color: #0e0e0e;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    #do-share-btn:hover { background: var(--accent-hover); }
+
+    #skip-share-btn {
+      padding: 12px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      color: var(--muted);
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    #skip-share-btn:hover { border-color: var(--muted); color: var(--text); }
+  </style>
+</head>
+<body>
+
+<header>
+  <button id="back-header-btn" title="Назад">←</button>
+  <h1>Записать рецепт</h1>
+</header>
+
+<main>
+
+  <!-- ── Params (pre-filled, editable) ─── -->
+  <div class="card">
+    <div class="card-title">Параметры заваривания</div>
+
+    <div class="form-row">
+      <span class="form-label">Кофе</span>
+      <input class="form-input" id="f-coffee" type="number" step="0.5">
+      <span class="form-unit">г</span>
+    </div>
+    <div class="form-row">
+      <span class="form-label">Вода</span>
+      <input class="form-input" id="f-water" type="number" step="5">
+      <span class="form-unit">мл</span>
+    </div>
+    <div class="form-row" id="f-temp-row">
+      <span class="form-label">Температура</span>
+      <input class="form-input" id="f-temp" type="number" step="1">
+      <span class="form-unit">°C</span>
+    </div>
+    <div class="form-row">
+      <span class="form-label">Общее время</span>
+      <input class="form-input" id="f-time" type="text" placeholder="3:00">
+      <span class="form-unit">мин</span>
+    </div>
+    <div class="form-row" id="f-method-row">
+      <span class="form-label">Метод</span>
+      <span id="f-method-display" style="color:var(--muted);font-size:0.875rem;"></span>
+    </div>
+  </div>
+
+  <!-- ── Coffee bean ─────────────────────── -->
+  <div class="card">
+    <div class="card-title">Зерно</div>
+    <div class="form-row form-row--full">
+      <span class="form-label">Название / происхождение</span>
+      <input class="form-input" id="f-bean" type="text" placeholder="Эфиопия Иргачеффе, светлая обжарка...">
+    </div>
+  </div>
+
+  <!-- ── Grinder ─────────────────────────── -->
+  <div class="card">
+    <div class="card-title">Кофемолка</div>
+    <div class="form-row">
+      <span class="form-label">Модель</span>
+      <select class="form-input" id="f-grinder" style="max-width:100%;flex:1;"></select>
+    </div>
+    <div class="form-row" id="grind-clicks-row">
+      <span class="form-label">Клики</span>
+      <input class="form-input" id="f-grind-clicks" type="number" step="1" min="1" placeholder="28">
+      <span class="form-unit">кл</span>
+    </div>
+    <div class="form-row">
+      <span class="form-label">Помол</span>
+      <input class="form-input" id="f-grind-microns" type="number" step="10" min="100" placeholder="700">
+      <span class="form-unit">мкм</span>
+    </div>
+  </div>
+
+  <!-- ── Taste sliders ───────────────────── -->
+  <div class="card">
+    <div class="card-title">Вкус</div>
+    <div class="slider-row" data-taste="sweetness">
+      <span class="slider-label">Сладость</span>
+      <div class="slider-track"></div>
+      <span class="slider-val">0</span>
+    </div>
+    <div class="slider-row" data-taste="acidity">
+      <span class="slider-label">Кислотность</span>
+      <div class="slider-track"></div>
+      <span class="slider-val">0</span>
+    </div>
+    <div class="slider-row" data-taste="bitterness">
+      <span class="slider-label">Горечь</span>
+      <div class="slider-track"></div>
+      <span class="slider-val">0</span>
+    </div>
+  </div>
+
+  <!-- ── Notes ──────────────────────────── -->
+  <div class="card">
+    <div class="card-title">Заметки</div>
+    <div class="form-row form-row--full">
+      <textarea class="form-input" id="f-notes" placeholder="Впечатления, что изменить в следующий раз..."></textarea>
+    </div>
+  </div>
+
+</main>
+
+<!-- Save bar -->
+<div id="save-bar">
+  <button id="save-recipe-btn">Сохранить рецепт</button>
+</div>
+
+<!-- Share modal -->
+<div id="share-modal-overlay">
+  <div id="share-modal">
+    <div class="share-icon">🎉</div>
+    <h2>Рецепт сохранён!</h2>
+    <p>Хотите поделиться этим рецептом? Другие пользователи смогут его увидеть в ленте и использовать.</p>
+    <div class="share-modal-actions">
+      <button id="do-share-btn">Поделиться в Feed</button>
+      <button id="skip-share-btn">Только в Мои рецепты</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { auth, saveMyRecipe, shareRecipe } from './js/firebase.js'
+import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js'
+import { GRINDERS } from './js/grinders.js'
+
+// ── Load brew data ────────────────────────────────────────────────────────────
+const brewData = JSON.parse(sessionStorage.getItem('brewState') || 'null')
+if (!brewData) { window.location.href = 'index.html' }
+
+const {
+  method, coffee_g, water_g, temp_c, brew_time_sec,
+  actual_brew_time_sec, grind_manual_microns,
+} = brewData
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function fmt(sec) {
+  const m = Math.floor(sec / 60)
+  const s = sec % 60
+  return `${m}:${String(s).padStart(2, '0')}`
+}
+
+function parseFmt(str) {
+  if (!str) return 0
+  const parts = str.split(':')
+  return (parseInt(parts[0]) || 0) * 60 + (parseInt(parts[1]) || 0)
+}
+
+const METHOD_NAMES = { v60: 'V60', aeropress: 'AeroPress', filter: 'Filter (Bravilor ISO)' }
+
+// ── Pre-fill form ─────────────────────────────────────────────────────────────
+document.getElementById('f-coffee').value = coffee_g
+document.getElementById('f-water').value  = water_g
+document.getElementById('f-time').value   = fmt(actual_brew_time_sec ?? brew_time_sec)
+document.getElementById('f-method-display').textContent = METHOD_NAMES[method] ?? method
+
+// Temperature: hide for filter (machine-controlled)
+if (method === 'filter') {
+  document.getElementById('f-temp-row').style.display = 'none'
+} else {
+  document.getElementById('f-temp').value = temp_c
+}
+
+// Pre-fill grind microns if filter method
+if (grind_manual_microns) {
+  document.getElementById('f-grind-microns').value = grind_manual_microns
+}
+
+// ── Grinder select ────────────────────────────────────────────────────────────
+const grinderSel = document.getElementById('f-grinder')
+grinderSel.innerHTML =
+  `<option value="">— не указано —</option>` +
+  GRINDERS.map(g => `<option value="${g.id}">${g.name}</option>`).join('')
+
+grinderSel.addEventListener('change', () => {
+  const g = GRINDERS.find(x => x.id === grinderSel.value)
+  const clicksRow = document.getElementById('grind-clicks-row')
+  // Show clicks input only for grinders that have µm/click data
+  clicksRow.style.display = (g && g.micron_per_click) ? 'flex' : 'none'
+})
+
+// ── Taste sliders ─────────────────────────────────────────────────────────────
+const tasteValues = { sweetness: 0, acidity: 0, bitterness: 0 }
+
+document.querySelectorAll('.slider-row').forEach(row => {
+  const taste = row.dataset.taste
+  const track = row.querySelector('.slider-track')
+  const valEl = row.querySelector('.slider-val')
+
+  // Build 5 pips
+  for (let i = 1; i <= 5; i++) {
+    const pip = document.createElement('div')
+    pip.className = 'slider-pip'
+    pip.dataset.val = i
+    pip.addEventListener('click', () => {
+      const newVal = tasteValues[taste] === i ? 0 : i
+      tasteValues[taste] = newVal
+      updatePips(track, newVal)
+      valEl.textContent = newVal
+    })
+    track.appendChild(pip)
+  }
+})
+
+function updatePips(track, val) {
+  track.querySelectorAll('.slider-pip').forEach(pip => {
+    pip.classList.toggle('active', parseInt(pip.dataset.val) <= val)
+  })
+}
+
+// ── Save logic ────────────────────────────────────────────────────────────────
+let _savedRecipeData = null
+let _currentUser = null
+
+onAuthStateChanged(auth, (user) => { _currentUser = user })
+
+document.getElementById('save-recipe-btn').addEventListener('click', async () => {
+  if (!_currentUser) {
+    alert('Для сохранения рецепта необходимо войти в аккаунт.')
+    return
+  }
+
+  const grinderVal = grinderSel.value
+  const grinderName = GRINDERS.find(g => g.id === grinderVal)?.name ?? null
+
+  _savedRecipeData = {
+    method,
+    coffee_g:    parseFloat(document.getElementById('f-coffee').value) || coffee_g,
+    water_g:     parseFloat(document.getElementById('f-water').value)  || water_g,
+    temp_c:      method === 'filter' ? 93 : (parseFloat(document.getElementById('f-temp').value) || temp_c),
+    brew_time_sec: parseFmt(document.getElementById('f-time').value) || brew_time_sec,
+    bean:        document.getElementById('f-bean').value.trim() || null,
+    grinder_id:  grinderVal || null,
+    grinder_name: grinderName,
+    grind_clicks:  parseInt(document.getElementById('f-grind-clicks').value) || null,
+    grind_microns: parseInt(document.getElementById('f-grind-microns').value) || null,
+    taste: { ...tasteValues },
+    notes: document.getElementById('f-notes').value.trim() || null,
+  }
+
+  const btn = document.getElementById('save-recipe-btn')
+  btn.disabled = true
+  btn.textContent = 'Сохраняю...'
+
+  try {
+    await saveMyRecipe(_savedRecipeData)
+    // Show share modal
+    document.getElementById('share-modal-overlay').classList.add('visible')
+  } catch (e) {
+    alert(`Ошибка сохранения: ${e.message}`)
+    btn.disabled = false
+    btn.textContent = 'Сохранить рецепт'
+  }
+})
+
+// ── Share modal actions ───────────────────────────────────────────────────────
+document.getElementById('do-share-btn').addEventListener('click', async () => {
+  if (_savedRecipeData) {
+    try {
+      await shareRecipe(_savedRecipeData)
+    } catch (e) {
+      console.error('Share failed:', e)
+    }
+  }
+  window.location.href = 'index.html'
+})
+
+document.getElementById('skip-share-btn').addEventListener('click', () => {
+  window.location.href = 'index.html'
+})
+
+// ── Back button ───────────────────────────────────────────────────────────────
+document.getElementById('back-header-btn').addEventListener('click', () => {
+  window.history.back()
+})
+</script>
+</body>
+</html>

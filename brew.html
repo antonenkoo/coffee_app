@@ -252,18 +252,39 @@
     #done-title { font-size: 2.2rem; font-weight: 700; color: var(--text); }
     #done-time  { font-size: 1rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 
+    .done-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      width: 100%;
+      max-width: 280px;
+      margin-top: 8px;
+    }
+
+    #save-btn {
+      padding: 14px 36px;
+      background: var(--accent);
+      border: none;
+      border-radius: 28px;
+      color: #0e0e0e;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    #save-btn:hover { background: #f0e0c0; }
+
     #back-btn {
-      margin-top: 12px;
       padding: 12px 36px;
       background: transparent;
-      border: 1px solid rgba(232,213,176,0.4);
+      border: 1px solid rgba(232,213,176,0.3);
       border-radius: 28px;
-      color: var(--accent);
-      font-size: 0.95rem;
+      color: var(--muted);
+      font-size: 0.9rem;
       cursor: pointer;
-      transition: background 0.15s, border-color 0.15s;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
     }
-    #back-btn:hover { background: rgba(232,213,176,0.08); border-color: var(--accent); }
+    #back-btn:hover { color: var(--accent); border-color: rgba(232,213,176,0.6); }
 
     @media (max-width: 380px) {
       #brew-timer { font-size: 5.5rem; }
@@ -313,7 +334,10 @@
     <div id="done-emoji">☕</div>
     <div id="done-title">Готово!</div>
     <div id="done-time"></div>
-    <button id="back-btn">← На главную</button>
+    <div class="done-actions">
+      <button id="save-btn">Записать рецепт</button>
+      <button id="back-btn">Завершить без записи</button>
+    </div>
   </div>
 </div>
 
@@ -494,6 +518,12 @@ function showDone(totalSec) {
   showPhase('phase-done')
   document.getElementById('done-time').textContent =
     `Время заваривания: ${fmt(totalSec)}`
+  // Save actual brew time back to sessionStorage for save-recipe page
+  try {
+    const stored = JSON.parse(sessionStorage.getItem('brewState') || '{}')
+    stored.actual_brew_time_sec = totalSec
+    sessionStorage.setItem('brewState', JSON.stringify(stored))
+  } catch(_) {}
   // Victory beeps
   playBeep(523, 0.18)
   setTimeout(() => playBeep(659, 0.18), 220)
@@ -503,18 +533,23 @@ function showDone(totalSec) {
 
 // ── Button handlers ──────────────────────────────────────────────────────────
 document.getElementById('start-btn').addEventListener('click', () => {
-  // Unlock AudioContext on user gesture (browser autoplay policy)
   _audioCtx = new (window.AudioContext || window.webkitAudioContext)()
   startCountdown()
 })
 
 document.getElementById('stop-btn').addEventListener('click', () => {
   if (brewInterval) clearInterval(brewInterval)
-  window.location.href = 'index.html'
+  const ok = confirm('Заваривание прервано. Данные не сохранятся. Выйти?')
+  if (ok) window.location.href = 'index.html'
+})
+
+document.getElementById('save-btn').addEventListener('click', () => {
+  window.location.href = 'save-recipe.html'
 })
 
 document.getElementById('back-btn').addEventListener('click', () => {
-  window.location.href = 'index.html'
+  const ok = confirm('Данные о заваривании не сохранятся. Точно выйти?')
+  if (ok) window.location.href = 'index.html'
 })
 </script>
 </body>
