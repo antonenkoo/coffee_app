@@ -47,45 +47,60 @@
 <body class="has-bottom-nav">
 
   <header>
-    <div>
+    <div style="flex:1;">
       <h1>🌐 Feed</h1>
-      <div class="feed-subtitle">Рецепты сообщества</div>
+      <div class="feed-subtitle" data-i18n="feed.subtitle">Рецепты сообщества</div>
+    </div>
+    <div class="lang-switcher">
+      <button class="lang-btn" data-lang="ru">RU</button>
+      <button class="lang-btn" data-lang="uk">UA</button>
+      <button class="lang-btn" data-lang="en">EN</button>
     </div>
   </header>
 
   <main>
-    <div id="loading-state">Загрузка...</div>
+    <div id="loading-state" data-i18n="feed.loading">Загрузка...</div>
     <div id="empty-state" class="hidden">
       <div class="empty-icon">☕</div>
-      <div>Пока никто не поделился рецептами.</div>
-      <div>Будьте первым — заварите кофе и нажмите «Поделиться»!</div>
+      <div data-i18n="feed.empty">Пока никто не поделился рецептами.</div>
+      <div data-i18n="feed.empty.cta">Будьте первым — заварите кофе и нажмите «Поделиться»!</div>
     </div>
     <div id="error-state" class="hidden">
       <div class="empty-icon">⚠️</div>
       <div id="error-msg">Ошибка загрузки</div>
     </div>
     <div id="feed-list" style="display:flex;flex-direction:column;gap:16px;"></div>
-    <button id="load-more-btn" class="hidden">Загрузить ещё</button>
+    <button id="load-more-btn" class="hidden" data-i18n="feed.loadmore">Загрузить ещё</button>
   </main>
 
   <!-- Bottom Navigation -->
   <nav id="bottom-nav">
     <a href="index.html" class="nav-btn">
       <span class="nav-icon">⚗️</span>
-      <span>Калькулятор</span>
+      <span data-i18n="nav.calc">Калькулятор</span>
     </a>
     <a href="feed.html" class="nav-btn active">
       <span class="nav-icon">🌐</span>
-      <span>Feed</span>
+      <span data-i18n="nav.feed">Feed</span>
     </a>
     <a href="my-recipes.html" class="nav-btn">
       <span class="nav-icon">📚</span>
-      <span>Мои</span>
+      <span data-i18n="nav.mine">Мои</span>
     </a>
   </nav>
 
   <script type="module">
   import { loadFeed } from './js/firebase.js'
+  import { t, applyI18n } from './js/i18n.js'
+  applyI18n()
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      import('./js/i18n.js').then(({ setLang, applyI18n: apply }) => {
+        setLang(btn.dataset.lang)
+        apply()
+      })
+    })
+  })
 
   const METHOD_NAMES = { v60: 'V60', aeropress: 'AeroPress', filter: 'Filter' }
   const TASTE_LABELS = { sweetness: 'Сладость', acidity: 'Кислотность', bitterness: 'Горечь' }
@@ -153,7 +168,7 @@
       ${tasteHtml}
       ${r.notes   ? `<div class="recipe-notes">${r.notes}</div>` : ''}
       <div class="recipe-card-footer">
-        <button class="btn-load">Загрузить в калькулятор</button>
+        <button class="btn-load">${t('feed.load.btn')}</button>
       </div>`
 
     card.querySelector('.btn-load').addEventListener('click', () => {

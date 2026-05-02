@@ -1,6 +1,7 @@
 // js/modal.js
 import { adjustForNewRatio, formatRatio, round } from './calculator.js'
 import { state, setState } from './state.js'
+import { t } from './i18n.js'
 
 let _onApply = null
 
@@ -17,9 +18,9 @@ export function openRatioModal(ratio_old, ratio_new, onApply) {
 
   // Build radio options with previews
   const options = [
-    { value: 'water',  label: 'Изменить воду' },
-    { value: 'coffee', label: 'Изменить кофе' },
-    { value: 'both',   label: 'Оба (balanced)' },
+    { value: 'water',  label: t('modal.water') },
+    { value: 'coffee', label: t('modal.coffee') },
+    { value: 'both',   label: t('modal.both') },
   ]
 
   optionsEl.innerHTML = options.map((opt, i) => {

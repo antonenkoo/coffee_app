@@ -992,6 +992,34 @@ main {
   transform: none;
 }
 
+/* ─── Language Switcher ─────────────────────────────────────────────────── */
+.lang-switcher {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.lang-btn {
+  padding: 3px 7px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.lang-btn:hover { border-color: var(--accent); color: var(--accent); }
+.lang-btn.active {
+  background: rgba(232,213,176,0.12);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 /* ─── Bottom Navigation ──────────────────────────────────────────────────── */
 #bottom-nav {
   position: fixed;

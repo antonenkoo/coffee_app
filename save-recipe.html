@@ -316,64 +316,69 @@
 
 <header>
   <button id="back-header-btn" title="Назад">←</button>
-  <h1>Записать рецепт</h1>
+  <h1 data-i18n="save.title">Записать рецепт</h1>
+  <div class="lang-switcher" style="margin-left:auto;">
+    <button class="lang-btn" data-lang="ru">RU</button>
+    <button class="lang-btn" data-lang="uk">UA</button>
+    <button class="lang-btn" data-lang="en">EN</button>
+  </div>
 </header>
 
 <main>
 
   <!-- ── Params (pre-filled, editable) ─── -->
   <div class="card">
-    <div class="card-title">Параметры заваривания</div>
+    <div class="card-title" data-i18n="save.card.params">Параметры заваривания</div>
 
     <div class="form-row">
-      <span class="form-label">Кофе</span>
+      <span class="form-label" data-i18n="save.label.coffee">Кофе</span>
       <input class="form-input" id="f-coffee" type="number" step="0.5">
       <span class="form-unit">г</span>
     </div>
     <div class="form-row">
-      <span class="form-label">Вода</span>
+      <span class="form-label" data-i18n="save.label.water">Вода</span>
       <input class="form-input" id="f-water" type="number" step="5">
       <span class="form-unit">мл</span>
     </div>
     <div class="form-row" id="f-temp-row">
-      <span class="form-label">Температура</span>
+      <span class="form-label" data-i18n="save.label.temp">Температура</span>
       <input class="form-input" id="f-temp" type="number" step="1">
       <span class="form-unit">°C</span>
     </div>
     <div class="form-row">
-      <span class="form-label">Общее время</span>
+      <span class="form-label" data-i18n="save.label.time">Общее время</span>
       <input class="form-input" id="f-time" type="text" placeholder="3:00">
       <span class="form-unit">мин</span>
     </div>
     <div class="form-row" id="f-method-row">
-      <span class="form-label">Метод</span>
+      <span class="form-label" data-i18n="save.label.method">Метод</span>
       <span id="f-method-display" style="color:var(--muted);font-size:0.875rem;"></span>
     </div>
   </div>
 
   <!-- ── Coffee bean ─────────────────────── -->
   <div class="card">
-    <div class="card-title">Зерно</div>
+    <div class="card-title" data-i18n="save.card.bean">Зерно</div>
     <div class="form-row form-row--full">
-      <span class="form-label">Название / происхождение</span>
-      <input class="form-input" id="f-bean" type="text" placeholder="Эфиопия Иргачеффе, светлая обжарка...">
+      <span class="form-label" data-i18n="save.card.bean">Зерно</span>
+      <input class="form-input" id="f-bean" type="text" data-i18n="save.bean.placeholder" placeholder="Эфиопия Иргачеффе, светлая обжарка...">
     </div>
   </div>
 
   <!-- ── Grinder ─────────────────────────── -->
   <div class="card">
-    <div class="card-title">Кофемолка</div>
+    <div class="card-title" data-i18n="save.card.grinder">Кофемолка</div>
     <div class="form-row">
       <span class="form-label">Модель</span>
       <select class="form-input" id="f-grinder" style="max-width:100%;flex:1;"></select>
     </div>
     <div class="form-row" id="grind-clicks-row">
-      <span class="form-label">Клики</span>
+      <span class="form-label" data-i18n="save.label.clicks">Клики</span>
       <input class="form-input" id="f-grind-clicks" type="number" step="1" min="1" placeholder="28">
       <span class="form-unit">кл</span>
     </div>
     <div class="form-row">
-      <span class="form-label">Помол</span>
+      <span class="form-label" data-i18n="save.label.microns">Помол</span>
       <input class="form-input" id="f-grind-microns" type="number" step="10" min="100" placeholder="700">
       <span class="form-unit">мкм</span>
     </div>
@@ -381,19 +386,19 @@
 
   <!-- ── Taste sliders ───────────────────── -->
   <div class="card">
-    <div class="card-title">Вкус</div>
+    <div class="card-title" data-i18n="save.card.taste">Вкус</div>
     <div class="slider-row" data-taste="sweetness">
-      <span class="slider-label">Сладость</span>
+      <span class="slider-label" data-i18n="save.taste.sweet">Сладость</span>
       <div class="slider-track"></div>
       <span class="slider-val">0</span>
     </div>
     <div class="slider-row" data-taste="acidity">
-      <span class="slider-label">Кислотность</span>
+      <span class="slider-label" data-i18n="save.taste.acid">Кислотность</span>
       <div class="slider-track"></div>
       <span class="slider-val">0</span>
     </div>
     <div class="slider-row" data-taste="bitterness">
-      <span class="slider-label">Горечь</span>
+      <span class="slider-label" data-i18n="save.taste.bitter">Горечь</span>
       <div class="slider-track"></div>
       <span class="slider-val">0</span>
     </div>
@@ -401,9 +406,9 @@
 
   <!-- ── Notes ──────────────────────────── -->
   <div class="card">
-    <div class="card-title">Заметки</div>
+    <div class="card-title" data-i18n="save.card.notes">Заметки</div>
     <div class="form-row form-row--full">
-      <textarea class="form-input" id="f-notes" placeholder="Впечатления, что изменить в следующий раз..."></textarea>
+      <textarea class="form-input" id="f-notes" data-i18n="save.notes.placeholder" placeholder="Впечатления, что изменить в следующий раз..."></textarea>
     </div>
   </div>
 
@@ -411,18 +416,18 @@
 
 <!-- Save bar -->
 <div id="save-bar">
-  <button id="save-recipe-btn">Сохранить рецепт</button>
+  <button id="save-recipe-btn" data-i18n="save.btn">Сохранить рецепт</button>
 </div>
 
 <!-- Share modal -->
 <div id="share-modal-overlay">
   <div id="share-modal">
     <div class="share-icon">🎉</div>
-    <h2>Рецепт сохранён!</h2>
-    <p>Хотите поделиться этим рецептом? Другие пользователи смогут его увидеть в ленте и использовать.</p>
+    <h2 data-i18n="save.share.title">Рецепт сохранён!</h2>
+    <p data-i18n="save.share.desc">Хотите поделиться этим рецептом? Другие пользователи смогут его увидеть в ленте и использовать.</p>
     <div class="share-modal-actions">
-      <button id="do-share-btn">Поделиться в Feed</button>
-      <button id="skip-share-btn">Только в Мои рецепты</button>
+      <button id="do-share-btn" data-i18n="save.share.do">Поделиться в Feed</button>
+      <button id="skip-share-btn" data-i18n="save.share.skip">Только в Мои рецепты</button>
     </div>
   </div>
 </div>
@@ -431,6 +436,11 @@
 import { auth, saveMyRecipe, shareRecipe } from './js/firebase.js'
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js'
 import { GRINDERS } from './js/grinders.js'
+import { t, setLang, applyI18n } from './js/i18n.js'
+applyI18n()
+document.querySelectorAll('.lang-btn').forEach(btn => {
+  btn.addEventListener('click', () => { setLang(btn.dataset.lang); applyI18n() })
+})
 
 // ── Load brew data ────────────────────────────────────────────────────────────
 const brewData = JSON.parse(sessionStorage.getItem('brewState') || 'null')
@@ -477,7 +487,7 @@ if (grind_manual_microns) {
 // ── Grinder select ────────────────────────────────────────────────────────────
 const grinderSel = document.getElementById('f-grinder')
 grinderSel.innerHTML =
-  `<option value="">— не указано —</option>` +
+  `<option value="">${t('save.grinder.none')}</option>` +
   GRINDERS.map(g => `<option value="${g.id}">${g.name}</option>`).join('')
 
 grinderSel.addEventListener('change', () => {
@@ -524,7 +534,7 @@ onAuthStateChanged(auth, (user) => { _currentUser = user })
 
 document.getElementById('save-recipe-btn').addEventListener('click', async () => {
   if (!_currentUser) {
-    alert('Для сохранения рецепта необходимо войти в аккаунт.')
+    alert(t('save.auth.required'))
     return
   }
 
@@ -548,7 +558,7 @@ document.getElementById('save-recipe-btn').addEventListener('click', async () =>
 
   const btn = document.getElementById('save-recipe-btn')
   btn.disabled = true
-  btn.textContent = 'Сохраняю...'
+  btn.textContent = t('save.btn.saving')
 
   try {
     await saveMyRecipe(_savedRecipeData)
@@ -557,7 +567,7 @@ document.getElementById('save-recipe-btn').addEventListener('click', async () =>
   } catch (e) {
     alert(`Ошибка сохранения: ${e.message}`)
     btn.disabled = false
-    btn.textContent = 'Сохранить рецепт'
+    btn.textContent = t('save.btn')
   }
 })
 

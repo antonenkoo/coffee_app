@@ -1,6 +1,7 @@
 // js/ui.js
 import { state } from './state.js'
 import { formatRatio, formatTime, celsiusToFahrenheit, round } from './calculator.js'
+import { t, applyI18n } from './i18n.js'
 import { getWarnings }    from './warnings.js'
 import { getSteps }       from './steps.js'
 import { getTips }        from './tips.js'
@@ -27,6 +28,7 @@ export function renderAll() {
   renderTemplateDescription(getRecipeById(state.template))
   renderTechniques()
   renderDynamic()
+  applyI18n()
 }
 
 /** Reactive blocks only — called on every parameter change without touching inputs. */
@@ -114,7 +116,7 @@ export function renderTemplateOptions(method) {
   if (!select) return
   const recipes = getRecipesForMethod(method)
   select.innerHTML =
-    `<option value="">— Выбрать рецепт —</option>` +
+    `<option value="">${t('template.placeholder')}</option>` +
     recipes.map(r => `<option value="${r.id}">${r.name}</option>`).join('')
   select.value = state.template ?? ''
 }
@@ -231,12 +233,12 @@ export function renderRecommended() {
 
   el.innerHTML = `
     <div class="rec-row">
-      <span class="rec-label">Оптимальная температура</span>
+      <span class="rec-label">${t('section.rec.temp')}</span>
       <span class="rec-value${tempOk ? ' rec-match' : ''}">${optTemp}°C
         ${tempOk ? '<span class="rec-check">✓</span>' : ''}</span>
     </div>
     <div class="rec-row">
-      <span class="rec-label">Оптимальное время</span>
+      <span class="rec-label">${t('section.rec.time')}</span>
       <span class="rec-value${timeOk ? ' rec-match' : ''}">${formatTime(optTime)}
         ${timeOk ? '<span class="rec-check">✓</span>' : ''}</span>
     </div>`

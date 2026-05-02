@@ -18,6 +18,7 @@ import { findMatchingRecipe, getRecipeById } from './js/RecipeService.js'
 import { checkIsPossible, calcFilterBrewTime } from './js/CalculationEngine.js'
 import { getBrewSteps } from './js/steps.js'
 import { auth, signIn, signUp, signInWithGoogle } from './js/firebase.js'
+import { t } from './js/i18n.js'
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js'
 
 // ─── Auth UI ──────────────────────────────────────────────────────────────────
@@ -224,7 +225,7 @@ document.getElementById('coffee-input').addEventListener('input', (e) => {
   const methodData = getMethodData()
   const { min, max } = methodData.ranges.coffee_g
   if (isNaN(val) || val < min || val > max) {
-    setFieldError('coffee', `от ${min} до ${max} г`)
+    setFieldError('coffee', t('error.coffee'))
     return
   }
   setFieldError('coffee', null)
@@ -241,7 +242,7 @@ document.getElementById('water-input').addEventListener('input', (e) => {
   const methodData = getMethodData()
   const { min, max } = methodData.ranges.water_g
   if (isNaN(val) || val < min || val > max) {
-    setFieldError('water', `от ${min} до ${max} г`)
+    setFieldError('water', t('error.water'))
     return
   }
   setFieldError('water', null)
@@ -270,7 +271,7 @@ function _openRatioModal() {
   if (_ratioModalOpen) return
   const ratio_new = parseFloat(document.getElementById('ratio-input').value)
   if (isNaN(ratio_new) || ratio_new < 8 || ratio_new > 20) {
-    setFieldError('ratio', 'от 8 до 20')
+    setFieldError('ratio', t('error.ratio'))
     return
   }
   setFieldError('ratio', null)
@@ -312,7 +313,7 @@ document.getElementById('temp-input').addEventListener('input', (e) => {
   if (isNaN(raw)) return
   const temp_c = state.temp_unit === 'C' ? raw : fahrenheitToCelsius(raw)
   if (temp_c < 70 || temp_c > 100) {
-    setFieldError('temp', 'от 70 до 100°C')
+    setFieldError('temp', t('error.temp'))
     return
   }
   setFieldError('temp', null)
@@ -330,7 +331,7 @@ document.getElementById('temp-unit-toggle').addEventListener('click', () => {
 function _applyTime(raw, reformat = false) {
   const sec = parseTime(raw)
   if (isNaN(sec) || sec <= 0) {
-    setFieldError('time', 'введите время > 0')
+    setFieldError('time', t('error.time'))
     return
   }
   setFieldError('time', null)

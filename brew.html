@@ -302,10 +302,10 @@
   <div id="phase-start" class="phase">
     <div class="brew-params-box" id="brew-params-info"></div>
     <div id="prep-wrap" class="hidden">
-      <div class="prep-title">Подготовка перед таймером:</div>
+      <div class="prep-title" data-i18n="brew.prep.title">Подготовка перед таймером:</div>
       <div id="prep-list"></div>
     </div>
-    <button id="start-btn">▶&nbsp;&nbsp;Начать заваривание</button>
+    <button id="start-btn" data-i18n="brew.start.btn">▶&nbsp;&nbsp;Начать заваривание</button>
   </div>
 
   <!-- ── COUNTDOWN PHASE ─────────────────────── -->
@@ -318,12 +318,12 @@
     <div id="progress-wrap"><div id="progress-fill"></div></div>
     <div id="brew-timer">00:00</div>
     <div id="current-step-wrap">
-      <div id="current-label">Текущий шаг</div>
+      <div id="current-label" data-i18n="brew.current.label">Текущий шаг</div>
       <div id="current-action"></div>
       <div id="current-note"></div>
     </div>
     <div id="next-step-wrap">
-      <div id="next-label">Следующий</div>
+      <div id="next-label" data-i18n="brew.next.label">Следующий</div>
       <div id="next-action"></div>
       <div id="next-in"></div>
     </div>
@@ -332,16 +332,19 @@
   <!-- ── DONE PHASE ──────────────────────────── -->
   <div id="phase-done" class="phase hidden">
     <div id="done-emoji">☕</div>
-    <div id="done-title">Готово!</div>
+    <div id="done-title" data-i18n="brew.done.title">Готово!</div>
     <div id="done-time"></div>
     <div class="done-actions">
-      <button id="save-btn">Записать рецепт</button>
-      <button id="back-btn">Завершить без записи</button>
+      <button id="save-btn" data-i18n="brew.save.btn">Записать рецепт</button>
+      <button id="back-btn" data-i18n="brew.back.btn">Завершить без записи</button>
     </div>
   </div>
 </div>
 
-<script>
+<script type="module">
+import { t, applyI18n } from './js/i18n.js'
+applyI18n()
+
 // ── Read brew data from sessionStorage ───────────────────────────────────────
 const brewData = JSON.parse(sessionStorage.getItem('brewState') || 'null')
 if (!brewData) { window.location.href = 'index.html' }
@@ -384,11 +387,11 @@ document.getElementById('brew-method-badge').textContent =
 
 // ── Params info box ──────────────────────────────────────────────────────────
 document.getElementById('brew-params-info').innerHTML = [
-  ['Кофе',        `${coffee_g}г`],
-  ['Вода',        `${water_g}г`],
-  ['Температура', `${temp_c}°C`],
-  ['Ratio',       `1:${(+ratio).toFixed(1)}`],
-  ['Время',       fmt(brew_time_sec)],
+  [t('save.label.coffee'), `${coffee_g}г`],
+  [t('save.label.water'),  `${water_g}г`],
+  [t('save.label.temp'),   `${temp_c}°C`],
+  ['Ratio',                `1:${(+ratio).toFixed(1)}`],
+  [t('save.label.time'),   fmt(brew_time_sec)],
 ].map(([l, v]) =>
   `<div class="brew-param"><span class="brew-param-label">${l}</span><span class="brew-param-value">${v}</span></div>`
 ).join('')
@@ -517,7 +520,7 @@ function showDone(totalSec) {
   clearInterval(brewInterval)
   showPhase('phase-done')
   document.getElementById('done-time').textContent =
-    `Время заваривания: ${fmt(totalSec)}`
+    t('brew.time.label') + fmt(totalSec)
   // Save actual brew time back to sessionStorage for save-recipe page
   try {
     const stored = JSON.parse(sessionStorage.getItem('brewState') || '{}')
@@ -539,7 +542,7 @@ document.getElementById('start-btn').addEventListener('click', () => {
 
 document.getElementById('stop-btn').addEventListener('click', () => {
   if (brewInterval) clearInterval(brewInterval)
-  const ok = confirm('Заваривание прервано. Данные не сохранятся. Выйти?')
+  const ok = confirm(t('brew.stop.confirm'))
   if (ok) window.location.href = 'index.html'
 })
 
@@ -548,7 +551,7 @@ document.getElementById('save-btn').addEventListener('click', () => {
 })
 
 document.getElementById('back-btn').addEventListener('click', () => {
-  const ok = confirm('Данные о заваривании не сохранятся. Точно выйти?')
+  const ok = confirm(t('brew.exit.confirm'))
   if (ok) window.location.href = 'index.html'
 })
 </script>
