@@ -992,6 +992,191 @@ main {
   transform: none;
 }
 
+/* ─── Bottom Navigation ──────────────────────────────────────────────────── */
+#bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0; right: 0;
+  display: flex;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  z-index: 50;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.nav-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 8px 9px;
+  text-decoration: none;
+  color: var(--text-muted);
+  font-size: 0.65rem;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  transition: color 0.15s;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+}
+
+.nav-btn:hover { color: var(--text); }
+.nav-btn.active { color: var(--accent); }
+
+.nav-icon {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+/* Offset main content so bottom nav doesn't cover it */
+body.has-bottom-nav main {
+  padding-bottom: calc(var(--gap-xl) + 64px);
+}
+
+body.has-bottom-nav #app-footer {
+  margin-bottom: 64px;
+}
+
+/* ─── Recipe Card (Feed + My Recipes) ───────────────────────────────────── */
+.recipe-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--gap-m);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.recipe-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.recipe-method-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--bg);
+  background: var(--accent);
+  padding: 3px 8px;
+  border-radius: var(--radius-xs);
+  flex-shrink: 0;
+}
+
+.recipe-meta {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  text-align: right;
+  line-height: 1.4;
+}
+
+.recipe-params {
+  font-size: 0.875rem;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.6;
+}
+
+.recipe-params span {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.recipe-bean {
+  font-size: 0.825rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.recipe-grinder {
+  font-size: 0.775rem;
+  color: var(--text-dim);
+}
+
+.recipe-taste {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.taste-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.taste-name {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  min-width: 72px;
+}
+
+.taste-pips {
+  display: flex;
+  gap: 3px;
+  flex: 1;
+}
+
+.taste-pip {
+  height: 5px;
+  flex: 1;
+  border-radius: 2px;
+  background: var(--surface-3);
+}
+
+.taste-pip.on { background: var(--accent); }
+
+.recipe-notes {
+  font-size: 0.825rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  font-style: italic;
+  border-left: 2px solid var(--border);
+  padding-left: 10px;
+}
+
+.recipe-card-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+}
+
+.btn-load {
+  padding: 7px 18px;
+  background: var(--accent-dim);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-s);
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+.btn-load:hover { background: var(--accent); color: var(--bg); }
+
+.btn-delete {
+  padding: 7px 12px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-s);
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.15s, color 0.15s;
+}
+.btn-delete:hover { border-color: #c0392b; color: #c0392b; }
+
 /* ─── Mobile adjustments ─────────────────────────────────────────────────── */
 @media (max-width: 400px) {
   header h1 { font-size: 1.25rem; }

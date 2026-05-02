@@ -6,7 +6,7 @@
   <title>Coffee Brew Calculator</title>
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body class="has-bottom-nav">
 
   <!-- Registration Overlay: hidden by default, shown only after Firebase confirms no user -->
   <div id="auth-overlay" class="modal-overlay" style="display:none">
@@ -247,6 +247,22 @@
   <footer id="app-footer">
     <a href="changelog.html" id="version-link">v1.3</a>
   </footer>
+
+  <!-- Bottom Navigation -->
+  <nav id="bottom-nav">
+    <a href="index.html" class="nav-btn active">
+      <span class="nav-icon">⚗️</span>
+      <span>Калькулятор</span>
+    </a>
+    <a href="feed.html" class="nav-btn">
+      <span class="nav-icon">🌐</span>
+      <span>Feed</span>
+    </a>
+    <a href="my-recipes.html" class="nav-btn">
+      <span class="nav-icon">📚</span>
+      <span>Мои</span>
+    </a>
+  </nav>
 
   <script type="module" src="app.js"></script>
   <script>

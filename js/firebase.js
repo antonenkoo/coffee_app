@@ -9,18 +9,19 @@ import {
   GoogleAuthProvider, 
   signInWithPopup 
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-import { 
-  getFirestore, 
-  collection, 
-  addDoc, 
-  getDocs, 
-  query, 
-  orderBy, 
-  limit, 
-  serverTimestamp, 
-  doc, 
-  getDoc, 
-  setDoc 
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  getDocs,
+  deleteDoc,
+  query,
+  orderBy,
+  limit,
+  serverTimestamp,
+  doc,
+  getDoc,
+  setDoc
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 const firebaseConfig = {
@@ -91,6 +92,13 @@ export async function loadFeed(count = 20) {
   const q = query(collection(db, 'recipes'), orderBy('createdAt', 'desc'), limit(count));
   const snap = await getDocs(q);
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+/** Delete a recipe from user's private collection. */
+export async function deleteMyRecipe(recipeId) {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Необходимо войти');
+  return deleteDoc(doc(db, 'users', user.uid, 'recipes', recipeId));
 }
 
 /** Load current user's saved recipes. */

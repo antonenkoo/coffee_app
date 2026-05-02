@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Feed — Coffee Brew</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* Page-specific overrides */
+    header { text-align: left; display: flex; align-items: center; gap: 12px; }
+    header h1 { font-size: 1.1rem; }
+    .feed-subtitle { font-size: 0.8rem; color: var(--text-muted); margin-top: 2px; }
+
+    #load-more-btn {
+      width: 100%;
+      padding: 12px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-s);
+      color: var(--text-muted);
+      font-size: 0.875rem;
+      cursor: pointer;
+      font-family: inherit;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    #load-more-btn:hover { border-color: var(--accent); color: var(--accent); }
+    #load-more-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    #empty-state, #error-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      line-height: 1.6;
+    }
+    #empty-state .empty-icon, #error-state .empty-icon { font-size: 2.5rem; margin-bottom: 12px; }
+
+    #loading-state {
+      display: flex;
+      justify-content: center;
+      padding: 40px;
+      color: var(--text-dim);
+      font-size: 0.875rem;
+    }
+  </style>
+</head>
+<body class="has-bottom-nav">
+
+  <header>
+    <div>
+      <h1>🌐 Feed</h1>
+      <div class="feed-subtitle">Рецепты сообщества</div>
+    </div>
+  </header>
+
+  <main>
+    <div id="loading-state">Загрузка...</div>
+    <div id="empty-state" class="hidden">
+      <div class="empty-icon">☕</div>
+      <div>Пока никто не поделился рецептами.</div>
+      <div>Будьте первым — заварите кофе и нажмите «Поделиться»!</div>
+    </div>
+    <div id="error-state" class="hidden">
+      <div class="empty-icon">⚠️</div>
+      <div id="error-msg">Ошибка загрузки</div>
+    </div>
+    <div id="feed-list" style="display:flex;flex-direction:column;gap:16px;"></div>
+    <button id="load-more-btn" class="hidden">Загрузить ещё</button>
+  </main>
+
+  <!-- Bottom Navigation -->
+  <nav id="bottom-nav">
+    <a href="index.html" class="nav-btn">
+      <span class="nav-icon">⚗️</span>
+      <span>Калькулятор</span>
+    </a>
+    <a href="feed.html" class="nav-btn active">
+      <span class="nav-icon">🌐</span>
+      <span>Feed</span>
+    </a>
+    <a href="my-recipes.html" class="nav-btn">
+      <span class="nav-icon">📚</span>
+      <span>Мои</span>
+    </a>
+  </nav>
+
+  <script type="module">
+  import { loadFeed } from './js/firebase.js'
+
+  const METHOD_NAMES = { v60: 'V60', aeropress: 'AeroPress', filter: 'Filter' }
+  const TASTE_LABELS = { sweetness: 'Сладость', acidity: 'Кислотность', bitterness: 'Горечь' }
+
+  function fmt(sec) {
+    if (!sec) return '—'
+    const m = Math.floor(sec / 60), s = sec % 60
+    return `${m}:${String(s).padStart(2,'0')}`
+  }
+
+  function formatDate(ts) {
+    if (!ts) return ''
+    try {
+      const d = ts.toDate ? ts.toDate() : new Date(ts)
+      return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' })
+    } catch { return '' }
+  }
+
+  function tastePips(val, max = 5) {
+    return Array.from({ length: max }, (_, i) =>
+      `<div class="taste-pip ${i < val ? 'on' : ''}"></div>`
+    ).join('')
+  }
+
+  function renderCard(r) {
+    const method = METHOD_NAMES[r.method] ?? r.method ?? '—'
+    const author = r.userEmail ? r.userEmail.split('@')[0] : 'аноним'
+    const date   = formatDate(r.createdAt)
+
+    const paramsLine = [
+      r.coffee_g   ? `<span>${r.coffee_g}г</span> кофе` : null,
+      r.water_g    ? `<span>${r.water_g}мл</span> воды` : null,
+      r.ratio      ? `1:<span>${(+r.ratio).toFixed(1)}</span>` : null,
+      r.method !== 'filter' && r.temp_c ? `<span>${r.temp_c}°C</span>` : null,
+      r.brew_time_sec ? `<span>${fmt(r.brew_time_sec)}</span>` : null,
+    ].filter(Boolean).join(' · ')
+
+    const grinderLine = [
+      r.grinder_name,
+      r.grind_clicks ? `${r.grind_clicks} кл` : null,
+      r.grind_microns ? `${r.grind_microns} мкм` : null,
+    ].filter(Boolean).join(' · ')
+
+    const hasTaste = r.taste && Object.values(r.taste).some(v => v > 0)
+    const tasteHtml = hasTaste
+      ? `<div class="recipe-taste">
+          ${Object.entries(r.taste).filter(([,v]) => v > 0).map(([k, v]) => `
+            <div class="taste-row">
+              <span class="taste-name">${TASTE_LABELS[k] ?? k}</span>
+              <div class="taste-pips">${tastePips(v)}</div>
+              <span style="font-size:0.7rem;color:var(--text-dim);min-width:12px">${v}</span>
+            </div>`).join('')}
+         </div>` : ''
+
+    const card = document.createElement('div')
+    card.className = 'recipe-card'
+    card.innerHTML = `
+      <div class="recipe-card-header">
+        <span class="recipe-method-badge">${method}</span>
+        <div class="recipe-meta">${author}<br>${date}</div>
+      </div>
+      <div class="recipe-params">${paramsLine}</div>
+      ${r.bean    ? `<div class="recipe-bean">☕ ${r.bean}</div>` : ''}
+      ${grinderLine ? `<div class="recipe-grinder">⚙ ${grinderLine}</div>` : ''}
+      ${tasteHtml}
+      ${r.notes   ? `<div class="recipe-notes">${r.notes}</div>` : ''}
+      <div class="recipe-card-footer">
+        <button class="btn-load">Загрузить в калькулятор</button>
+      </div>`
+
+    card.querySelector('.btn-load').addEventListener('click', () => {
+      sessionStorage.setItem('externalRecipe', JSON.stringify({
+        method:        r.method,
+        coffee_g:      r.coffee_g,
+        water_g:       r.water_g,
+        ratio:         r.ratio,
+        temp_c:        r.temp_c,
+        brew_time_sec: r.brew_time_sec,
+      }))
+      window.location.href = 'index.html'
+    })
+
+    return card
+  }
+
+  // ── Load feed ─────────────────────────────────────────────────────────────
+  const listEl      = document.getElementById('feed-list')
+  const loadingEl   = document.getElementById('loading-state')
+  const emptyEl     = document.getElementById('empty-state')
+  const errorEl     = document.getElementById('error-state')
+  const loadMoreBtn = document.getElementById('load-more-btn')
+
+  let _page = 0
+  const PAGE = 20
+
+  async function loadPage() {
+    loadMoreBtn.disabled = true
+    try {
+      const recipes = await loadFeed(PAGE * (_page + 1))
+      loadingEl.classList.add('hidden')
+
+      if (recipes.length === 0) {
+        emptyEl.classList.remove('hidden')
+        return
+      }
+
+      // Render only new items (skip already rendered)
+      const newItems = recipes.slice(_page * PAGE)
+      newItems.forEach(r => listEl.appendChild(renderCard(r)))
+      _page++
+
+      // Show "load more" only if we got a full page
+      loadMoreBtn.classList.toggle('hidden', recipes.length < PAGE * _page)
+      loadMoreBtn.disabled = false
+    } catch (e) {
+      loadingEl.classList.add('hidden')
+      errorEl.classList.remove('hidden')
+      document.getElementById('error-msg').textContent = `Ошибка: ${e.message}`
+    }
+  }
+
+  loadPage()
+  loadMoreBtn.addEventListener('click', loadPage)
+  </script>
+</body>
+</html>

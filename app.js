@@ -401,3 +401,20 @@ initModal()
 // ─── Init ────────────────────────────────────────────────────────────────────
 
 renderAll()
+
+// Apply recipe loaded from Feed / My Recipes (stored by those pages before navigating here)
+const _ext = JSON.parse(sessionStorage.getItem('externalRecipe') || 'null')
+if (_ext) {
+  sessionStorage.removeItem('externalRecipe')
+  const methodData = _ext.method === 'v60' ? V60 : _ext.method === 'filter' ? FILTER : AEROPRESS
+  setState({
+    method:        _ext.method ?? 'v60',
+    coffee_g:      _ext.coffee_g   ?? methodData.defaults.coffee_g,
+    water_g:       _ext.water_g    ?? methodData.defaults.water_g,
+    ratio:         _ext.ratio      ?? (_ext.water_g / _ext.coffee_g),
+    temp_c:        _ext.temp_c     ?? methodData.defaults.temp_c,
+    brew_time_sec: _ext.brew_time_sec ?? methodData.defaults.brew_time_sec,
+    template: null, templateOrigin: null, pour_technique: null,
+  })
+  renderAll()
+}

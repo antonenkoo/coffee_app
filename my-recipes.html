@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Мои рецепты — Coffee Brew</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    header { text-align: left; display: flex; align-items: center; gap: 12px; }
+    header h1 { font-size: 1.1rem; }
+    .page-subtitle { font-size: 0.8rem; color: var(--text-muted); margin-top: 2px; }
+
+    #empty-state, #auth-prompt, #error-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      line-height: 1.7;
+    }
+    .state-icon { font-size: 2.5rem; margin-bottom: 12px; }
+
+    #auth-prompt a {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    #loading-state {
+      display: flex;
+      justify-content: center;
+      padding: 40px;
+      color: var(--text-dim);
+      font-size: 0.875rem;
+    }
+  </style>
+</head>
+<body class="has-bottom-nav">
+
+  <header>
+    <div>
+      <h1>📚 Мои рецепты</h1>
+      <div class="page-subtitle" id="recipes-count"></div>
+    </div>
+  </header>
+
+  <main>
+    <div id="loading-state">Загрузка...</div>
+
+    <div id="auth-prompt" class="hidden">
+      <div class="state-icon">🔐</div>
+      <div>Для просмотра рецептов<br>необходимо <a href="index.html">войти в аккаунт</a>.</div>
+    </div>
+
+    <div id="empty-state" class="hidden">
+      <div class="state-icon">☕</div>
+      <div>У вас пока нет сохранённых рецептов.</div>
+      <div>Заварите кофе и нажмите «Записать рецепт»!</div>
+    </div>
+
+    <div id="error-state" class="hidden">
+      <div class="state-icon">⚠️</div>
+      <div id="error-msg">Ошибка загрузки</div>
+    </div>
+
+    <div id="recipes-list" style="display:flex;flex-direction:column;gap:16px;"></div>
+  </main>
+
+  <!-- Bottom Navigation -->
+  <nav id="bottom-nav">
+    <a href="index.html" class="nav-btn">
+      <span class="nav-icon">⚗️</span>
+      <span>Калькулятор</span>
+    </a>
+    <a href="feed.html" class="nav-btn">
+      <span class="nav-icon">🌐</span>
+      <span>Feed</span>
+    </a>
+    <a href="my-recipes.html" class="nav-btn active">
+      <span class="nav-icon">📚</span>
+      <span>Мои</span>
+    </a>
+  </nav>
+
+  <script type="module">
+  import { auth, loadMyRecipes, deleteMyRecipe } from './js/firebase.js'
+  import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js'
+
+  const METHOD_NAMES = { v60: 'V60', aeropress: 'AeroPress', filter: 'Filter' }
+  const TASTE_LABELS = { sweetness: 'Сладость', acidity: 'Кислотность', bitterness: 'Горечь' }
+
+  function fmt(sec) {
+    if (!sec) return '—'
+    const m = Math.floor(sec / 60), s = sec % 60
+    return `${m}:${String(s).padStart(2,'0')}`
+  }
+
+  function formatDate(ts) {
+    if (!ts) return ''
+    try {
+      const d = ts.toDate ? ts.toDate() : new Date(ts)
+      return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' })
+    } catch { return '' }
+  }
+
+  function tastePips(val, max = 5) {
+    return Array.from({ length: max }, (_, i) =>
+      `<div class="taste-pip ${i < val ? 'on' : ''}"></div>`
+    ).join('')
+  }
+
+  function renderCard(r) {
+    const method = METHOD_NAMES[r.method] ?? r.method ?? '—'
+    const date   = formatDate(r.createdAt)
+
+    const paramsLine = [
+      r.coffee_g   ? `<span>${r.coffee_g}г</span> кофе` : null,
+      r.water_g    ? `<span>${r.water_g}мл</span> воды` : null,
+      r.ratio      ? `1:<span>${(+r.ratio).toFixed(1)}</span>` : null,
+      r.method !== 'filter' && r.temp_c ? `<span>${r.temp_c}°C</span>` : null,
+      r.brew_time_sec ? `<span>${fmt(r.brew_time_sec)}</span>` : null,
+    ].filter(Boolean).join(' · ')
+
+    const grinderLine = [
+      r.grinder_name,
+      r.grind_clicks  ? `${r.grind_clicks} кл` : null,
+      r.grind_microns ? `${r.grind_microns} мкм` : null,
+    ].filter(Boolean).join(' · ')
+
+    const hasTaste = r.taste && Object.values(r.taste).some(v => v > 0)
+    const tasteHtml = hasTaste
+      ? `<div class="recipe-taste">
+          ${Object.entries(r.taste).filter(([,v]) => v > 0).map(([k, v]) => `
+            <div class="taste-row">
+              <span class="taste-name">${TASTE_LABELS[k] ?? k}</span>
+              <div class="taste-pips">${tastePips(v)}</div>
+              <span style="font-size:0.7rem;color:var(--text-dim);min-width:12px">${v}</span>
+            </div>`).join('')}
+         </div>` : ''
+
+    const card = document.createElement('div')
+    card.className = 'recipe-card'
+    card.dataset.id = r.id
+    card.innerHTML = `
+      <div class="recipe-card-header">
+        <span class="recipe-method-badge">${method}</span>
+        <div class="recipe-meta">${date}</div>
+      </div>
+      <div class="recipe-params">${paramsLine}</div>
+      ${r.bean      ? `<div class="recipe-bean">☕ ${r.bean}</div>` : ''}
+      ${grinderLine ? `<div class="recipe-grinder">⚙ ${grinderLine}</div>` : ''}
+      ${tasteHtml}
+      ${r.notes     ? `<div class="recipe-notes">${r.notes}</div>` : ''}
+      <div class="recipe-card-footer">
+        <button class="btn-delete" data-id="${r.id}">Удалить</button>
+        <button class="btn-load">Загрузить</button>
+      </div>`
+
+    card.querySelector('.btn-load').addEventListener('click', () => {
+      sessionStorage.setItem('externalRecipe', JSON.stringify({
+        method:        r.method,
+        coffee_g:      r.coffee_g,
+        water_g:       r.water_g,
+        ratio:         r.ratio,
+        temp_c:        r.temp_c,
+        brew_time_sec: r.brew_time_sec,
+      }))
+      window.location.href = 'index.html'
+    })
+
+    card.querySelector('.btn-delete').addEventListener('click', async (e) => {
+      const id = e.currentTarget.dataset.id
+      if (!confirm('Удалить этот рецепт? Это действие нельзя отменить.')) return
+      try {
+        await deleteMyRecipe(id)
+        const cardEl = document.querySelector(`.recipe-card[data-id="${id}"]`)
+        if (cardEl) cardEl.remove()
+        updateCount()
+      } catch (err) {
+        alert(`Ошибка удаления: ${err.message}`)
+      }
+    })
+
+    return card
+  }
+
+  function updateCount() {
+    const count = document.querySelectorAll('.recipe-card').length
+    document.getElementById('recipes-count').textContent =
+      count > 0 ? `${count} ${count === 1 ? 'рецепт' : count < 5 ? 'рецепта' : 'рецептов'}` : ''
+    if (count === 0) document.getElementById('empty-state').classList.remove('hidden')
+  }
+
+  // ── Auth + load ───────────────────────────────────────────────────────────
+  const listEl    = document.getElementById('recipes-list')
+  const loadingEl = document.getElementById('loading-state')
+
+  onAuthStateChanged(auth, async (user) => {
+    loadingEl.classList.add('hidden')
+
+    if (!user) {
+      document.getElementById('auth-prompt').classList.remove('hidden')
+      return
+    }
+
+    try {
+      const recipes = await loadMyRecipes()
+      if (recipes.length === 0) {
+        document.getElementById('empty-state').classList.remove('hidden')
+        return
+      }
+      recipes.forEach(r => listEl.appendChild(renderCard(r)))
+      document.getElementById('recipes-count').textContent =
+        `${recipes.length} ${recipes.length === 1 ? 'рецепт' : recipes.length < 5 ? 'рецепта' : 'рецептов'}`
+    } catch (e) {
+      document.getElementById('error-state').classList.remove('hidden')
+      document.getElementById('error-msg').textContent = `Ошибка: ${e.message}`
+    }
+  })
+  </script>
+</body>
+</html>
