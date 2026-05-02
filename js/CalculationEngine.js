@@ -67,6 +67,16 @@ export function calcOptimalTime(method, ratio, coffee_g) {
   }
 }
 
+// ─── Filter: auto brew time ───────────────────────────────────────────────────
+
+/**
+ * Bravilor Bonamat ISO flow rate: ~150 ml/min
+ * Returns brew_time_sec based on water volume.
+ */
+export function calcFilterBrewTime(water_g) {
+  return Math.round(water_g / 150 * 60)
+}
+
 // ─── Grind Range (no recipe selected) ────────────────────────────────────────
 
 const _GRIND_IDEAL = {

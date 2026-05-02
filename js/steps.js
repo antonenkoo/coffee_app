@@ -7,8 +7,9 @@ import { formatTime } from './calculator.js'
 // start_sec: N    = triggered when timer reaches N seconds
 
 export function getBrewSteps(state) {
-  const { method, coffee_g, water_g, temp_c, brew_time_sec, aeropress_style, pour_technique } = state
-  if (method === 'v60') return _brewV60(coffee_g, water_g, temp_c, brew_time_sec, pour_technique)
+  const { method, coffee_g, water_g, temp_c, brew_time_sec, aeropress_style, pour_technique, grind_manual_microns } = state
+  if (method === 'v60')     return _brewV60(coffee_g, water_g, temp_c, brew_time_sec, pour_technique)
+  if (method === 'filter')  return _brewFilter(coffee_g, water_g, brew_time_sec, grind_manual_microns)
   return _brewAeropress(coffee_g, water_g, temp_c, aeropress_style, brew_time_sec)
 }
 
@@ -109,10 +110,9 @@ function _brewAeropress(coffee_g, water_g, temp_c, style, brew_time_sec) {
  * Each step: { time, action, note }
  */
 export function getSteps(state) {
-  const { method, coffee_g, water_g, temp_c, brew_time_sec, aeropress_style, pour_technique } = state
-  if (method === 'v60') {
-    return _v60Steps(coffee_g, water_g, temp_c, brew_time_sec, pour_technique)
-  }
+  const { method, coffee_g, water_g, temp_c, brew_time_sec, aeropress_style, pour_technique, grind_manual_microns } = state
+  if (method === 'v60')    return _v60Steps(coffee_g, water_g, temp_c, brew_time_sec, pour_technique)
+  if (method === 'filter') return _filterStepsUI(coffee_g, water_g, brew_time_sec, grind_manual_microns)
   return _aeropressSteps(coffee_g, water_g, temp_c, aeropress_style, brew_time_sec)
 }
 
@@ -299,5 +299,47 @@ function _aeropressSteps(coffee_g, water_g, temp_c, style, brew_time_sec) {
     { time: `${formatTime(insert_sec)} – ${formatTime(steep_sec)}`, action: `Настаивание <strong>${formatTime(steep_sec - insert_sec)}</strong>${tempNote}`, note: null },
     { time: `${formatTime(steep_sec)} – ${formatTime(done_sec)}`, action: 'Медленно давить поршень ~30 сек до шипения', note: 'Остановитесь на шипении — последние капли содержат горечь' },
     { time: formatTime(done_sec), action: '☕ Готово!', note: null },
+  ]
+}
+
+// ─── Filter (Bravilor Bonamat ISO) ────────────────────────────────────────────
+
+/** Steps shown in the main UI (with time labels). */
+function _filterStepsUI(coffee_g, water_g, brew_time_sec, grind_microns) {
+  const grindNote = grind_microns ? `Помол: ${grind_microns} мкм` : 'Средний помол'
+  return [
+    {
+      time:   '—',
+      action: 'Установить бумажный фильтр, промыть горячей водой',
+      note:   'Убирает бумажный привкус, прогревает колбу',
+    },
+    {
+      time:   '0:00',
+      action: `Засыпать <strong>${coffee_g}г</strong> кофе равномерно`,
+      note:   grindNote,
+    },
+    {
+      time:   '0:00',
+      action: `Включить машину, залить <strong>${water_g}г</strong> воды`,
+      note:   'Bravilor ISO — температура ~93°C, управляет машина',
+    },
+    {
+      time:   `~${formatTime(brew_time_sec)}`,
+      action: '☕ Дождаться окончания заваривания',
+      note:   `Расчётное время: ${formatTime(brew_time_sec)} (${water_g}мл / 150мл·мин)`,
+    },
+  ]
+}
+
+/** Steps for brew.html (with start_sec). */
+function _brewFilter(coffee_g, water_g, brew_time_sec, grind_microns) {
+  const grindNote = grind_microns ? `Помол: ${grind_microns} мкм` : null
+  return [
+    // Prep before timer
+    { start_sec: null,           action: 'Установить фильтр, промыть горячей водой', note: 'Убирает бумажный привкус' },
+    { start_sec: null,           action: `Засыпать <b>${coffee_g}г</b> кофе равномерно`, note: grindNote },
+    // Timer starts when water is poured
+    { start_sec: 0,              action: `Залить <b>${water_g}г</b> воды, запустить машину`, note: '~93°C — машина управляет температурой' },
+    { start_sec: brew_time_sec,  action: '☕ Заваривание завершено!', note: null },
   ]
 }

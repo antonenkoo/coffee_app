@@ -34,6 +34,7 @@
       <section id="method-selector">
         <button class="method-btn active" data-method="v60">V60</button>
         <button class="method-btn" data-method="aeropress">AeroPress</button>
+        <button class="method-btn" data-method="filter">Filter</button>
       </section>
       <button id="reset-btn" title="Сбросить к дефолтам">↺</button>
     </div>
@@ -102,7 +103,7 @@
         </div>
       </div>
 
-      <div class="param-row">
+      <div class="param-row" id="param-row-temp">
         <label for="temp-input">Temperature</label>
         <div class="param-field">
           <div class="param-input-wrap">
@@ -115,7 +116,7 @@
         </div>
       </div>
 
-      <div class="param-row">
+      <div class="param-row" id="param-row-time">
         <label for="time-input">Brew Time</label>
         <div class="param-field">
           <div class="param-input-wrap">
@@ -131,7 +132,7 @@
         </div>
       </div>
 
-      <div class="param-row grind-row">
+      <div class="param-row grind-row" id="param-row-grind-calc">
         <label>Grind Size</label>
         <div class="param-input-wrap grind-display">
           <span id="grind-microns" class="grind-value">—</span>
@@ -139,6 +140,30 @@
           <span class="grind-sep">·</span>
           <span id="grind-clicks" class="grind-value">—</span>
           <span class="unit">кл C40</span>
+        </div>
+      </div>
+
+      <!-- Filter only: manual grind input -->
+      <div class="param-row hidden" id="param-row-filter-grind">
+        <label for="filter-grind-input">Помол</label>
+        <div class="param-field">
+          <div class="param-input-wrap">
+            <input id="filter-grind-input" type="number" step="10" min="300" max="1200">
+            <span class="unit">мкм</span>
+          </div>
+          <span class="field-hint">рек. 600–800 мкм для Bravilor ISO</span>
+        </div>
+      </div>
+
+      <!-- Filter only: auto brew time + machine temp -->
+      <div class="param-row hidden" id="param-row-filter-info">
+        <label>Авто</label>
+        <div class="param-input-wrap">
+          <span id="filter-time-display" class="grind-value">—</span>
+          <span class="unit">мин</span>
+          <span class="grind-sep">·</span>
+          <span class="grind-value">~93°C</span>
+          <span class="unit">(машина)</span>
         </div>
       </div>
 

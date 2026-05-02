@@ -13,8 +13,9 @@ import {
 import { openRatioModal, initModal } from './js/modal.js'
 import { V60 }       from './data/v60.js'
 import { AEROPRESS } from './data/aeropress.js'
+import { FILTER }    from './data/filter.js'
 import { findMatchingRecipe, getRecipeById } from './js/RecipeService.js'
-import { checkIsPossible } from './js/CalculationEngine.js'
+import { checkIsPossible, calcFilterBrewTime } from './js/CalculationEngine.js'
 import { getBrewSteps } from './js/steps.js'
 import { auth, signIn, signUp, signInWithGoogle } from './js/firebase.js'
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js'
@@ -121,22 +122,32 @@ document.querySelectorAll('.method-btn').forEach(btn => {
     const method = btn.dataset.method
     if (method === state.method) return
 
-    const methodData = method === 'v60' ? V60 : AEROPRESS
+    const methodData = method === 'v60' ? V60 : method === 'filter' ? FILTER : AEROPRESS
     const r = methodData.ranges
 
-    // Preserve coffee_g + ratio; recalculate water; clip to new method's ranges
-    const coffee_g = Math.max(r.coffee_g.min, Math.min(r.coffee_g.max, state.coffee_g))
-    const ratio    = Math.max(r.ratio.min,    Math.min(r.ratio.max,    state.ratio))
-    const water_g  = Math.max(r.water_g.min,  Math.min(r.water_g.max,  Math.round(coffee_g * ratio)))
+    if (method === 'filter') {
+      // Filter: use its own defaults (fixed params)
+      setState({
+        method,
+        template: null, templateOrigin: null,
+        pour_technique: null,
+        ...FILTER.defaults,
+      })
+    } else {
+      // V60 / AeroPress: preserve coffee_g + ratio, recalculate water, clip to ranges
+      const coffee_g = Math.max(r.coffee_g.min, Math.min(r.coffee_g.max, state.coffee_g))
+      const ratio    = Math.max(r.ratio.min,    Math.min(r.ratio.max,    state.ratio))
+      const water_g  = Math.max(r.water_g.min,  Math.min(r.water_g.max,  Math.round(coffee_g * ratio)))
+      setState({
+        method,
+        template: null, templateOrigin: null,
+        pour_technique: null,
+        temp_c:        methodData.defaults.temp_c,
+        brew_time_sec: methodData.defaults.brew_time_sec,
+        coffee_g, ratio, water_g,
+      })
+    }
 
-    setState({
-      method,
-      template: null, templateOrigin: null,
-      pour_technique: null,
-      temp_c:        methodData.defaults.temp_c,
-      brew_time_sec: methodData.defaults.brew_time_sec,
-      coffee_g, ratio, water_g,
-    })
     _dismissedSuggestionId = null
     hideTemplateSuggestion()
     document.querySelectorAll('.technique-card[data-technique]').forEach(c =>
@@ -149,7 +160,7 @@ document.querySelectorAll('.method-btn').forEach(btn => {
 // ─── Reset ───────────────────────────────────────────────────────────────────
 
 document.getElementById('reset-btn')?.addEventListener('click', () => {
-  const methodData = state.method === 'v60' ? V60 : AEROPRESS
+  const methodData = state.method === 'v60' ? V60 : state.method === 'filter' ? FILTER : AEROPRESS
   setState({
     ...methodData.defaults,
     template: null, templateOrigin: null,
@@ -210,8 +221,10 @@ document.getElementById('suggestion-dismiss')?.addEventListener('click', () => {
 
 document.getElementById('coffee-input').addEventListener('input', (e) => {
   const val = parseFloat(e.target.value)
-  if (isNaN(val) || val < 5 || val > 100) {
-    setFieldError('coffee', 'от 5 до 100 г')
+  const methodData = getMethodData()
+  const { min, max } = methodData.ranges.coffee_g
+  if (isNaN(val) || val < min || val > max) {
+    setFieldError('coffee', `от ${min} до ${max} г`)
     return
   }
   setFieldError('coffee', null)
@@ -225,15 +238,28 @@ document.getElementById('coffee-input').addEventListener('input', (e) => {
 
 document.getElementById('water-input').addEventListener('input', (e) => {
   const val = parseFloat(e.target.value)
-  if (isNaN(val) || val < 50 || val > 1000) {
-    setFieldError('water', 'от 50 до 1000 г')
+  const methodData = getMethodData()
+  const { min, max } = methodData.ranges.water_g
+  if (isNaN(val) || val < min || val > max) {
+    setFieldError('water', `от ${min} до ${max} г`)
     return
   }
   setFieldError('water', null)
   const ratio = calcRatio(state.coffee_g, val)
-  setState({ water_g: val, ratio })
+  const patch = { water_g: val, ratio }
+  // Filter: auto-recalculate brew time from water volume
+  if (state.method === 'filter') patch.brew_time_sec = calcFilterBrewTime(val)
+  setState(patch)
   document.getElementById('ratio-input').value = round(ratio, 1)
   _afterChange()
+})
+
+// ─── Filter: Manual Grind Input ───────────────────────────────────────────────
+
+document.getElementById('filter-grind-input')?.addEventListener('input', (e) => {
+  const val = parseInt(e.target.value, 10)
+  if (isNaN(val) || val < 300 || val > 1200) return
+  setState({ grind_manual_microns: val })
 })
 
 // ─── Ratio Input + Apply ────────────────────────────────────────────────────

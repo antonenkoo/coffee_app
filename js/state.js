@@ -1,6 +1,6 @@
 // js/state.js
 export const state = {
-  method:           'v60',       // 'v60' | 'aeropress'
+  method:           'v60',       // 'v60' | 'aeropress' | 'filter'
   coffee_g:         15,
   water_g:          250,
   ratio:            16.67,       // always synced: water_g / coffee_g
@@ -16,6 +16,9 @@ export const state = {
 
   // ─── Pour technique (V60 only) ─────────────────────────────────────────
   pour_technique:   null,        // null | '3-pour' | '1-pour' | '46'
+
+  // ─── Filter method ───────────────────────────────────────────────────────
+  grind_manual_microns: 700,     // user-set grind size in µm (filter only)
 
   // ─── Derived state ───────────────────────────────────────────────────────
   isPossible:       true,        // false → "Impossible Brewing Parameters" overlay

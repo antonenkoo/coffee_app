@@ -6,11 +6,15 @@ import { getSteps }       from './steps.js'
 import { getTips }        from './tips.js'
 import { V60 }            from '../data/v60.js'
 import { AEROPRESS }      from '../data/aeropress.js'
+import { FILTER }         from '../data/filter.js'
+import { calcFilterBrewTime } from './CalculationEngine.js'
 import { getRecipeById, getRecipesForMethod } from './RecipeService.js'
 import { calcGrind, calcGrindRange, calcOptimalTemp, calcOptimalTime } from './CalculationEngine.js'
 
 export function getMethodData() {
-  return state.method === 'v60' ? V60 : AEROPRESS
+  if (state.method === 'v60')    return V60
+  if (state.method === 'filter') return FILTER
+  return AEROPRESS
 }
 
 // ─── Composite renders ────────────────────────────────────────────────────────
@@ -43,24 +47,57 @@ export function renderParams() {
   document.getElementById('coffee-input').value = round(state.coffee_g, 1)
   document.getElementById('water-input').value  = round(state.water_g, 0)
   document.getElementById('ratio-input').value  = round(state.ratio, 1)
-  document.getElementById('time-input').value   = formatTime(state.brew_time_sec)
 
-  const tempBtn = document.getElementById('temp-unit-toggle')
-  if (state.temp_unit === 'C') {
-    document.getElementById('temp-input').value = round(state.temp_c, 0)
-    tempBtn.textContent = '°C'
-  } else {
-    document.getElementById('temp-input').value = round(celsiusToFahrenheit(state.temp_c), 0)
-    tempBtn.textContent = '°F'
+  if (state.method !== 'filter') {
+    document.getElementById('time-input').value = formatTime(state.brew_time_sec)
+    const tempBtn = document.getElementById('temp-unit-toggle')
+    if (state.temp_unit === 'C') {
+      document.getElementById('temp-input').value = round(state.temp_c, 0)
+      tempBtn.textContent = '°C'
+    } else {
+      document.getElementById('temp-input').value = round(celsiusToFahrenheit(state.temp_c), 0)
+      tempBtn.textContent = '°F'
+    }
+  }
+
+  // Filter: manual grind input + auto time display
+  if (state.method === 'filter') {
+    const filterGrindEl = document.getElementById('filter-grind-input')
+    if (filterGrindEl && state.grind_manual_microns != null) {
+      filterGrindEl.value = state.grind_manual_microns
+    }
+    const filterTimeEl = document.getElementById('filter-time-display')
+    if (filterTimeEl) filterTimeEl.textContent = formatTime(state.brew_time_sec)
   }
 }
 
 // ─── Method / Style UI ────────────────────────────────────────────────────────
 
 export function renderMethodUI() {
-  const styleRow = document.getElementById('aeropress-style-row')
-  if (styleRow) styleRow.style.display = state.method === 'aeropress' ? 'flex' : 'none'
+  const isFilter    = state.method === 'filter'
+  const isAeropress = state.method === 'aeropress'
 
+  // AeroPress style toggle
+  const styleRow = document.getElementById('aeropress-style-row')
+  if (styleRow) styleRow.style.display = isAeropress ? 'flex' : 'none'
+
+  // Filter: hide temp + time rows, show filter-specific rows
+  const toggleRow = (id, hidden) => document.getElementById(id)?.classList.toggle('hidden', hidden)
+  toggleRow('param-row-temp',         isFilter)
+  toggleRow('param-row-time',         isFilter)
+  toggleRow('param-row-grind-calc',   isFilter)
+  toggleRow('param-row-filter-grind', !isFilter)
+  toggleRow('param-row-filter-info',  !isFilter)
+
+  // Filter: hide template selector (no recipes for filter)
+  const templateRow = document.getElementById('template-row')
+  if (templateRow) templateRow.classList.toggle('hidden', isFilter)
+
+  // Filter: hide pouring techniques
+  const techSection = document.getElementById('techniques-section')
+  if (isFilter && techSection) techSection.classList.add('hidden')
+
+  // Active method button
   document.querySelectorAll('.method-btn').forEach(btn =>
     btn.classList.toggle('active', btn.dataset.method === state.method)
   )
@@ -154,7 +191,7 @@ export function getPendingSuggestion() {
 
 // ─── Techniques (no template selected) ───────────────────────────────────────
 
-/** Show pouring-technique cards for V60 (always, regardless of template). */
+/** Show pouring-technique cards for V60 only. */
 export function renderTechniques() {
   const el = document.getElementById('techniques-section')
   if (!el) return
@@ -164,6 +201,9 @@ export function renderTechniques() {
 // ─── Grind Display ────────────────────────────────────────────────────────────
 
 export function renderGrind() {
+  // Filter has its own manual grind row — skip the calculated grind display
+  if (state.method === 'filter') return
+
   const mEl = document.getElementById('grind-microns')
   const cEl = document.getElementById('grind-clicks')
   if (!mEl || !cEl) return
