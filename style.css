@@ -984,6 +984,14 @@ main {
   transform: scale(0.97);
 }
 
+#brew-btn:disabled {
+  background: var(--surface-3);
+  color: var(--text-dim);
+  box-shadow: none;
+  cursor: not-allowed;
+  transform: none;
+}
+
 /* ─── Mobile adjustments ─────────────────────────────────────────────────── */
 @media (max-width: 400px) {
   header h1 { font-size: 1.25rem; }
@@ -1067,4 +1075,17 @@ main {
   15%  { opacity: 1; transform: translateX(-50%) translateY(0); }
   80%  { opacity: 1; }
   100% { opacity: 0; }
+}
+
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: var(--bg);
+  z-index: 9999;
+  display: flex; align-items: center; justify-content: center;
+}
+#nickname-input {
+  width: 100%; padding: 12px;
+  background: var(--surface-2); border: 1px solid var(--border);
+  color: var(--text); border-radius: var(--radius-s);
+  margin: 16px 0;
 }

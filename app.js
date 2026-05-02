@@ -16,6 +16,54 @@ import { AEROPRESS } from './data/aeropress.js'
 import { findMatchingRecipe, getRecipeById } from './js/RecipeService.js'
 import { checkIsPossible } from './js/CalculationEngine.js'
 import { getBrewSteps } from './js/steps.js'
+import { auth, signIn, signUp, signInWithGoogle } from './js/firebase.js'
+import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js'
+
+// ─── Auth UI ──────────────────────────────────────────────────────────────────
+
+const authOverlay = document.getElementById('auth-overlay')
+const emailIn     = document.getElementById('email-input')
+const passIn      = document.getElementById('pass-input')
+const authError   = document.getElementById('auth-error')
+
+function showAuthError(msg) {
+  authError.textContent = msg
+  authError.style.display = 'block'
+}
+
+// Firebase tells us definitively whether a user is logged in.
+// Overlay starts hidden (display:none in HTML); we only show it when confirmed no user.
+onAuthStateChanged(auth, (user) => {
+  authOverlay.style.display = user ? 'none' : 'flex'
+})
+
+document.getElementById('login-btn').addEventListener('click', async () => {
+  authError.style.display = 'none'
+  try {
+    await signIn(emailIn.value.trim(), passIn.value)
+  } catch (e) {
+    showAuthError(e.message)
+  }
+})
+
+document.getElementById('signup-btn').addEventListener('click', async () => {
+  authError.style.display = 'none'
+  try {
+    await signUp(emailIn.value.trim(), passIn.value)
+  } catch (e) {
+    showAuthError(e.message)
+  }
+})
+
+document.getElementById('google-btn').addEventListener('click', async () => {
+  authError.style.display = 'none'
+  try {
+    await signInWithGoogle()
+  } catch (e) {
+    showAuthError(e.message)
+  }
+})
+
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -304,6 +352,7 @@ document.querySelectorAll('.technique-card[data-technique]').forEach(card => {
 // ─── Brew Button ─────────────────────────────────────────────────────────────
 
 document.getElementById('brew-btn')?.addEventListener('click', () => {
+  if (!state.isPossible) return
   const brewSteps = getBrewSteps(state)
   sessionStorage.setItem('brewState', JSON.stringify({
     method:          state.method,

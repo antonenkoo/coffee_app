@@ -206,8 +206,13 @@ export function renderRecommended() {
 
 export function renderImpossible() {
   const overlay = document.getElementById('impossible-overlay')
-  if (!overlay) return
-  overlay.classList.toggle('hidden', state.isPossible)
+  if (overlay) overlay.classList.toggle('hidden', state.isPossible)
+
+  const brewBtn = document.getElementById('brew-btn')
+  if (brewBtn) {
+    brewBtn.disabled = !state.isPossible
+    brewBtn.title = state.isPossible ? '' : 'Параметры выходят за допустимые пределы'
+  }
 }
 
 // ─── Warnings ─────────────────────────────────────────────────────────────────

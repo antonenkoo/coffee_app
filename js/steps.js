@@ -70,30 +70,35 @@ function _brewV60FourSix(coffee_g, water_g, temp_c, brew_time_sec) {
 }
 
 function _brewAeropress(coffee_g, water_g, temp_c, style, brew_time_sec) {
-  const press_sec  = 30
-  const steep_sec  = Math.max(30, brew_time_sec - press_sec)
-  const done_sec   = steep_sec + press_sec
+  // brew_time_sec = steep time + 30s press
+  // Timer starts the moment water hits coffee (start_sec: 0)
+  const steep_sec  = Math.max(30, brew_time_sec - 30)
+  const done_sec   = steep_sec + 30
 
   if (style === 'inverted') {
     const filter_sec = Math.max(steep_sec - 10, Math.round(steep_sec * 0.88))
     return [
-      { start_sec: null,        action: 'Перевернуть AeroPress поршнем вниз (1 см внутри)', note: null },
-      { start_sec: null,        action: `Засыпать <b>${coffee_g}г</b> кофе (средний помол)`, note: null },
-      { start_sec: null,        action: `Залить <b>${water_g}г</b> воды (${temp_c}°C), перемешать 10 сек`, note: null },
-      { start_sec: 0,           action: `Настаивание — ${formatTime(steep_sec)}`, note: 'Не перемешивайте' },
-      { start_sec: filter_sec,  action: 'Установить фильтр, смочить кипятком', note: null },
-      { start_sec: steep_sec,   action: 'Перевернуть на кружку, медленно давить 30 сек', note: 'Остановитесь на шипении' },
-      { start_sec: done_sec,    action: '☕ Готово!', note: null },
+      // Prep before timer — shown on start screen
+      { start_sec: null,       action: 'Перевернуть AeroPress поршнем вниз (1 см внутри)', note: null },
+      { start_sec: null,       action: `Засыпать <b>${coffee_g}г</b> кофе (средний помол)`, note: null },
+      // Timer starts here — water hits coffee
+      { start_sec: 0,          action: `Залить <b>${water_g}г</b> воды (${temp_c}°C), перемешать 10 сек`, note: 'Таймер пошёл — вода в кофе' },
+      { start_sec: 15,         action: `Настаивание — ждать до ${formatTime(filter_sec)}`, note: 'Не перемешивайте' },
+      { start_sec: filter_sec, action: 'Установить фильтр, смочить кипятком', note: null },
+      { start_sec: steep_sec,  action: 'Перевернуть на кружку, медленно давить 30 сек', note: 'Остановитесь на шипении' },
+      { start_sec: done_sec,   action: '☕ Готово!', note: null },
     ]
   }
 
+  // Standard
   const insert_sec = 30
   return [
+    // Prep before timer
     { start_sec: null,       action: 'Установить фильтр, прогреть кипятком, слить воду', note: null },
     { start_sec: null,       action: `Засыпать <b>${coffee_g}г</b> кофе (средний помол)`, note: null },
-    { start_sec: null,       action: `Залить <b>${water_g}г</b> воды (${temp_c}°C), перемешать 10 сек`, note: null },
-    { start_sec: 0,          action: `Настаивание — ${formatTime(steep_sec)}`, note: null },
-    { start_sec: insert_sec, action: 'Вставить поршень, создать вакуум', note: null },
+    // Timer starts here — water hits coffee
+    { start_sec: 0,          action: `Залить <b>${water_g}г</b> воды (${temp_c}°C), перемешать 10 сек`, note: 'Таймер пошёл — вода в кофе' },
+    { start_sec: insert_sec, action: 'Вставить поршень, создать вакуум', note: 'Вакуум замедляет дренаж' },
     { start_sec: steep_sec,  action: 'Медленно давить поршень 30 сек', note: 'Остановитесь на шипении' },
     { start_sec: done_sec,   action: '☕ Готово!', note: null },
   ]
