@@ -15,6 +15,7 @@ import {
   addDoc,
   getDocs,
   deleteDoc,
+  updateDoc,
   query,
   orderBy,
   limit,
@@ -75,14 +76,21 @@ export async function saveMyRecipe(data) {
   });
 }
 
-/** Share recipe to the public feed. */
+/** Share recipe to the public feed. Includes nickname if available. */
 export async function shareRecipe(data) {
   const user = auth.currentUser;
   if (!user) throw new Error('Необходимо войти');
+  // Try to get nickname from profile
+  let nickname = null;
+  try {
+    const profile = await getUserProfile();
+    nickname = profile?.nickname || null;
+  } catch (_) {}
   return addDoc(collection(db, 'recipes'), {
     ...data,
     uid: user.uid,
     userEmail: user.email,
+    userNickname: nickname,
     createdAt: serverTimestamp(),
   });
 }
@@ -112,4 +120,79 @@ export async function loadMyRecipes() {
   );
   const snap = await getDocs(q);
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+/** Update a recipe in user's private collection. */
+export async function updateMyRecipe(recipeId, data) {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Необходимо войти');
+  return updateDoc(doc(db, 'users', user.uid, 'recipes', recipeId), data);
+}
+
+// ─── Firestore: custom techniques ────────────────────────────────────────────
+
+/** Save a custom pour technique. */
+export async function saveCustomTechnique(data) {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Необходимо войти');
+  return addDoc(collection(db, 'users', user.uid, 'techniques'), {
+    ...data,
+    createdAt: serverTimestamp(),
+  });
+}
+
+/** Load current user's custom techniques. */
+export async function loadCustomTechniques() {
+  const user = auth.currentUser;
+  if (!user) return [];
+  const q = query(
+    collection(db, 'users', user.uid, 'techniques'),
+    orderBy('createdAt', 'desc')
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+/** Delete a custom technique. */
+export async function deleteCustomTechnique(id) {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Необходимо войти');
+  return deleteDoc(doc(db, 'users', user.uid, 'techniques', id));
+}
+
+// ─── Firestore: user profile ────────────────────────────────────────────────
+
+/** Load user profile (nickname, etc). */
+export async function getUserProfile() {
+  const user = auth.currentUser;
+  if (!user) return null;
+  const snap = await getDoc(doc(db, 'users', user.uid));
+  return snap.exists() ? snap.data() : null;
+}
+
+/** Update user profile fields (e.g. nickname). */
+export async function updateUserProfile(data) {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Необходимо войти');
+  return setDoc(doc(db, 'users', user.uid), data, { merge: true });
+}
+
+/** Delete all user recipes. */
+export async function deleteAllMyRecipes() {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Необходимо войти');
+  const q = query(collection(db, 'users', user.uid, 'recipes'), limit(500));
+  const snap = await getDocs(q);
+  const promises = snap.docs.map(d => deleteDoc(d.ref));
+  return Promise.all(promises);
+}
+
+/** Delete all custom techniques. */
+export async function deleteAllCustomTechniques() {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Необходимо войти');
+  const q = query(collection(db, 'users', user.uid, 'techniques'), limit(500));
+  const snap = await getDocs(q);
+  const promises = snap.docs.map(d => deleteDoc(d.ref));
+  return Promise.all(promises);
 }

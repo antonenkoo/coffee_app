@@ -1302,3 +1302,81 @@ body.has-bottom-nav #app-footer {
   color: var(--text); border-radius: var(--radius-s);
   margin: 16px 0;
 }
+
+/* ─── Stepper Buttons (+/−) ─────────────────────────────────────────────── */
+.stepper-btn {
+  width: 28px; height: 28px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--accent);
+  font-size: 1.05rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+  transition: background 0.15s, border-color 0.15s;
+  font-family: inherit;
+}
+.stepper-btn:hover {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+}
+.stepper-btn:active { transform: scale(0.93); }
+
+/* ─── Preset Chips ───────────────────────────────────────────────────────── */
+.param-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 5px;
+}
+.preset-chip {
+  padding: 3px 9px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 0.72rem;
+  cursor: pointer;
+  transition: background 0.13s, color 0.13s, border-color 0.13s;
+  font-family: inherit;
+}
+.preset-chip:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-dim);
+}
+.preset-chip.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-dim);
+}
+
+/* ─── Ratio Lock Button ──────────────────────────────────────────────────── */
+.ratio-lock-btn {
+  width: 28px; height: 28px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 0.75rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  font-family: inherit;
+}
+.ratio-lock-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.ratio-lock-btn.active {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}

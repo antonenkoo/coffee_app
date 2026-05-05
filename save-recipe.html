@@ -317,11 +317,6 @@
 <header>
   <button id="back-header-btn" title="Назад">←</button>
   <h1 data-i18n="save.title">Записать рецепт</h1>
-  <div class="lang-switcher" style="margin-left:auto;">
-    <button class="lang-btn" data-lang="ru">RU</button>
-    <button class="lang-btn" data-lang="uk">UA</button>
-    <button class="lang-btn" data-lang="en">EN</button>
-  </div>
 </header>
 
 <main>
@@ -353,6 +348,10 @@
     <div class="form-row" id="f-method-row">
       <span class="form-label" data-i18n="save.label.method">Метод</span>
       <span id="f-method-display" style="color:var(--muted);font-size:0.875rem;"></span>
+    </div>
+    <div class="form-row" id="f-technique-row" style="display:none">
+      <span class="form-label">Техника</span>
+      <span id="f-technique-display" style="color:var(--accent);font-size:0.875rem;font-weight:500;"></span>
     </div>
   </div>
 
@@ -436,11 +435,8 @@
 import { auth, saveMyRecipe, shareRecipe } from './js/firebase.js'
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js'
 import { GRINDERS } from './js/grinders.js'
-import { t, setLang, applyI18n } from './js/i18n.js'
+import { t, applyI18n } from './js/i18n.js'
 applyI18n()
-document.querySelectorAll('.lang-btn').forEach(btn => {
-  btn.addEventListener('click', () => { setLang(btn.dataset.lang); applyI18n() })
-})
 
 // ── Load brew data ────────────────────────────────────────────────────────────
 const brewData = JSON.parse(sessionStorage.getItem('brewState') || 'null')
@@ -449,7 +445,14 @@ if (!brewData) { window.location.href = 'index.html' }
 const {
   method, coffee_g, water_g, temp_c, brew_time_sec,
   actual_brew_time_sec, grind_manual_microns,
+  pour_technique, customTechniqueSteps,
 } = brewData
+
+const TECHNIQUE_NAMES = {
+  '3-pour': '3 пролива',
+  '1-pour': 'Один пролив',
+  '46':     '4:6 метод',
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function fmt(sec) {
@@ -482,6 +485,13 @@ if (method === 'filter') {
 // Pre-fill grind microns if filter method
 if (grind_manual_microns) {
   document.getElementById('f-grind-microns').value = grind_manual_microns
+}
+
+// Show technique row for V60 if technique was selected
+if (method === 'v60' && pour_technique) {
+  document.getElementById('f-technique-row').style.display = 'flex'
+  const techName = TECHNIQUE_NAMES[pour_technique] || pour_technique
+  document.getElementById('f-technique-display').textContent = techName
 }
 
 // ── Grinder select ────────────────────────────────────────────────────────────
@@ -554,6 +564,8 @@ document.getElementById('save-recipe-btn').addEventListener('click', async () =>
     grind_microns: parseInt(document.getElementById('f-grind-microns').value) || null,
     taste: { ...tasteValues },
     notes: document.getElementById('f-notes').value.trim() || null,
+    technique: pour_technique || null,
+    customTechniqueSteps: customTechniqueSteps || null,
   }
 
   const btn = document.getElementById('save-recipe-btn')

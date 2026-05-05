@@ -51,11 +51,6 @@
       <h1>🌐 Feed</h1>
       <div class="feed-subtitle" data-i18n="feed.subtitle">Рецепты сообщества</div>
     </div>
-    <div class="lang-switcher">
-      <button class="lang-btn" data-lang="ru">RU</button>
-      <button class="lang-btn" data-lang="uk">UA</button>
-      <button class="lang-btn" data-lang="en">EN</button>
-    </div>
   </header>
 
   <main>
@@ -87,20 +82,16 @@
       <span class="nav-icon">📚</span>
       <span data-i18n="nav.mine">Мои</span>
     </a>
+    <a href="profile.html" class="nav-btn">
+      <span class="nav-icon">👤</span>
+      <span data-i18n="nav.profile">Профиль</span>
+    </a>
   </nav>
 
   <script type="module">
   import { loadFeed } from './js/firebase.js'
   import { t, applyI18n } from './js/i18n.js'
   applyI18n()
-  document.querySelectorAll('.lang-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      import('./js/i18n.js').then(({ setLang, applyI18n: apply }) => {
-        setLang(btn.dataset.lang)
-        apply()
-      })
-    })
-  })
 
   const METHOD_NAMES = { v60: 'V60', aeropress: 'AeroPress', filter: 'Filter' }
   const TASTE_LABELS = { sweetness: 'Сладость', acidity: 'Кислотность', bitterness: 'Горечь' }
@@ -127,7 +118,7 @@
 
   function renderCard(r) {
     const method = METHOD_NAMES[r.method] ?? r.method ?? '—'
-    const author = r.userEmail ? r.userEmail.split('@')[0] : 'аноним'
+    const author = r.userNickname || (r.userEmail ? r.userEmail.split('@')[0] : 'аноним')
     const date   = formatDate(r.createdAt)
 
     const paramsLine = [

@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Профиль — Coffee Brew</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    header { text-align: left; display: flex; align-items: center; gap: 12px; }
+    header h1 { font-size: 1.1rem; }
+
+    .profile-avatar {
+      width: 56px; height: 56px;
+      border-radius: 50%;
+      background: var(--surface-2);
+      border: 2px solid var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.6rem;
+      color: var(--accent);
+      flex-shrink: 0;
+    }
+
+    .profile-header-info {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 8px 0;
+    }
+    .profile-header-info .profile-name {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .profile-header-info .profile-email {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* Cards */
+    .settings-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .settings-card-title {
+      padding: 11px 16px 9px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .settings-row {
+      display: flex;
+      align-items: center;
+      padding: 13px 16px;
+      gap: 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .settings-row:last-child { border-bottom: none; }
+
+    .settings-label {
+      font-size: 0.875rem;
+      color: var(--text);
+      flex: 1;
+      min-width: 0;
+    }
+    .settings-value {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      text-align: right;
+      flex-shrink: 0;
+    }
+    .settings-value--accent {
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    /* Nickname input row */
+    .nickname-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+      min-width: 0;
+    }
+    .nickname-input {
+      flex: 1;
+      padding: 8px 10px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-s);
+      color: var(--text);
+      font-size: 0.9rem;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.15s;
+      min-width: 0;
+    }
+    .nickname-input:focus { border-color: var(--accent); }
+    .nickname-save-btn {
+      padding: 8px 14px;
+      background: var(--accent);
+      border: none;
+      border-radius: var(--radius-s);
+      color: var(--bg);
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s;
+    }
+    .nickname-save-btn:hover { background: var(--accent-hover); }
+    .nickname-save-btn:disabled { background: var(--surface-3); color: var(--text-dim); cursor: not-allowed; }
+    .nickname-status {
+      font-size: 0.75rem;
+      color: var(--accent);
+      white-space: nowrap;
+    }
+
+    /* Danger buttons */
+    .btn-danger-outline {
+      padding: 7px 14px;
+      background: transparent;
+      border: 1px solid rgba(200,80,80,0.3);
+      border-radius: var(--radius-s);
+      color: #d07070;
+      font-size: 0.8rem;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.15s, border-color 0.15s;
+      white-space: nowrap;
+    }
+    .btn-danger-outline:hover { background: rgba(200,80,80,0.1); border-color: #d07070; }
+    .btn-danger-outline:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* Sign out */
+    .signout-btn {
+      width: 100%;
+      padding: 13px;
+      background: transparent;
+      border: 1px solid rgba(200,80,80,0.25);
+      border-radius: var(--radius);
+      color: #d07070;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .signout-btn:hover { background: rgba(200,80,80,0.08); border-color: #d07070; }
+
+    /* Auth prompt */
+    #auth-prompt {
+      text-align: center;
+      padding: 48px 20px;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      line-height: 1.7;
+    }
+    #auth-prompt .state-icon { font-size: 2.5rem; margin-bottom: 12px; }
+    #auth-prompt a { color: var(--accent); text-decoration: none; font-weight: 500; }
+
+    #loading-state {
+      display: flex;
+      justify-content: center;
+      padding: 48px;
+      color: var(--text-dim);
+      font-size: 0.875rem;
+    }
+
+    #profile-content { display: flex; flex-direction: column; gap: 16px; }
+  </style>
+</head>
+<body class="has-bottom-nav">
+
+  <header>
+    <div style="flex:1;">
+      <h1 data-i18n="profile.title">Профиль</h1>
+    </div>
+  </header>
+
+  <main>
+    <div id="loading-state">Загрузка...</div>
+
+    <div id="auth-prompt" class="hidden">
+      <div class="state-icon">🔐</div>
+      <div><span data-i18n="profile.auth.required">Войдите, чтобы управлять профилем</span><br>
+        <a href="index.html" data-i18n="myrecipes.auth.link">войти в аккаунт</a>
+      </div>
+    </div>
+
+    <div id="profile-content" class="hidden">
+
+      <!-- User info header -->
+      <div class="profile-header-info">
+        <div class="profile-avatar" id="profile-avatar">☕</div>
+        <div>
+          <div class="profile-name" id="profile-display-name">—</div>
+          <div class="profile-email" id="profile-email">—</div>
+        </div>
+      </div>
+
+      <!-- Nickname -->
+      <div class="settings-card">
+        <div class="settings-card-title" data-i18n="profile.section.account">Аккаунт</div>
+        <div class="settings-row">
+          <span class="settings-label" data-i18n="profile.nickname">Никнейм</span>
+          <div class="nickname-row">
+            <input id="nickname-input" class="nickname-input"
+                   type="text" maxlength="24"
+                   data-i18n="profile.nickname.placeholder" placeholder="Ваш никнейм">
+            <button id="nickname-save" class="nickname-save-btn" data-i18n="profile.nickname.save">Сохранить</button>
+          </div>
+        </div>
+        <div class="settings-row">
+          <span class="settings-label" data-i18n="profile.email">Email</span>
+          <span class="settings-value" id="profile-email-row">—</span>
+        </div>
+      </div>
+
+      <!-- Data management -->
+      <div class="settings-card">
+        <div class="settings-card-title" data-i18n="profile.section.data">Данные</div>
+        <div class="settings-row">
+          <span class="settings-label">
+            <span data-i18n="profile.recipes.count">Сохранённых рецептов</span>:
+            <strong id="recipes-count-val">—</strong>
+          </span>
+          <button id="clear-recipes-btn" class="btn-danger-outline" data-i18n="profile.recipes.clear">Очистить</button>
+        </div>
+        <div class="settings-row">
+          <span class="settings-label">
+            <span data-i18n="profile.techniques.count">Кастомных техник</span>:
+            <strong id="techniques-count-val">—</strong>
+          </span>
+          <button id="clear-techniques-btn" class="btn-danger-outline" data-i18n="profile.techniques.clear">Удалить</button>
+        </div>
+      </div>
+
+      <!-- App settings -->
+      <div class="settings-card">
+        <div class="settings-card-title" data-i18n="profile.section.app">Приложение</div>
+        <div class="settings-row">
+          <span class="settings-label" data-i18n="profile.language">Язык</span>
+          <div class="lang-switcher" style="margin-left:0;">
+            <button class="lang-btn" data-lang="ru">RU</button>
+            <button class="lang-btn" data-lang="uk">UA</button>
+            <button class="lang-btn" data-lang="en">EN</button>
+          </div>
+        </div>
+        <div class="settings-row">
+          <span class="settings-label" data-i18n="profile.version">Версия</span>
+          <a href="changelog.html" class="settings-value settings-value--accent" style="text-decoration:none;">v2.1</a>
+        </div>
+      </div>
+
+      <!-- Sign out -->
+      <button id="signout-btn" class="signout-btn" data-i18n="profile.signout">Выйти из аккаунта</button>
+    </div>
+  </main>
+
+  <!-- Bottom Navigation -->
+  <nav id="bottom-nav">
+    <a href="index.html" class="nav-btn">
+      <span class="nav-icon">⚗️</span>
+      <span data-i18n="nav.calc">Калькулятор</span>
+    </a>
+    <a href="feed.html" class="nav-btn">
+      <span class="nav-icon">🌐</span>
+      <span data-i18n="nav.feed">Feed</span>
+    </a>
+    <a href="my-recipes.html" class="nav-btn">
+      <span class="nav-icon">📚</span>
+      <span data-i18n="nav.mine">Мои</span>
+    </a>
+    <a href="profile.html" class="nav-btn active">
+      <span class="nav-icon">👤</span>
+      <span data-i18n="nav.profile">Профиль</span>
+    </a>
+  </nav>
+
+  <script type="module">
+  import {
+    auth, logOut, getUserProfile, updateUserProfile,
+    loadMyRecipes, loadCustomTechniques,
+    deleteAllMyRecipes, deleteAllCustomTechniques,
+  } from './js/firebase.js'
+  import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js'
+  import { t, setLang, applyI18n } from './js/i18n.js'
+
+  applyI18n()
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      setLang(btn.dataset.lang)
+      applyI18n()
+    })
+  })
+
+  const loadingEl   = document.getElementById('loading-state')
+  const authPrompt  = document.getElementById('auth-prompt')
+  const contentEl   = document.getElementById('profile-content')
+  const nicknameIn  = document.getElementById('nickname-input')
+  const nicknameSave = document.getElementById('nickname-save')
+
+  let _recipesCount = 0
+  let _techniquesCount = 0
+
+  onAuthStateChanged(auth, async (user) => {
+    loadingEl.classList.add('hidden')
+
+    if (!user) {
+      authPrompt.classList.remove('hidden')
+      contentEl.classList.add('hidden')
+      return
+    }
+
+    authPrompt.classList.add('hidden')
+    contentEl.classList.remove('hidden')
+
+    // Email display
+    document.getElementById('profile-email').textContent = user.email
+    document.getElementById('profile-email-row').textContent = user.email
+
+    // Avatar letter
+    const avatarEl = document.getElementById('profile-avatar')
+
+    // Load profile + data counts in parallel
+    try {
+      const [profile, recipes, techniques] = await Promise.all([
+        getUserProfile(),
+        loadMyRecipes(),
+        loadCustomTechniques(),
+      ])
+
+      // Nickname
+      const nickname = profile?.nickname || ''
+      nicknameIn.value = nickname
+      document.getElementById('profile-display-name').textContent =
+        nickname || user.email.split('@')[0]
+
+      // Avatar from nickname or email
+      const initial = (nickname || user.email || '?')[0].toUpperCase()
+      avatarEl.textContent = initial
+
+      // Counts
+      _recipesCount = recipes.length
+      _techniquesCount = techniques.length
+      document.getElementById('recipes-count-val').textContent = _recipesCount
+      document.getElementById('techniques-count-val').textContent = _techniquesCount
+
+      // Disable clear buttons if 0
+      document.getElementById('clear-recipes-btn').disabled = _recipesCount === 0
+      document.getElementById('clear-techniques-btn').disabled = _techniquesCount === 0
+    } catch (e) {
+      console.error('Profile load error:', e)
+    }
+  })
+
+  // ── Nickname save ──────────────────────────────────────────────────────────
+  nicknameSave.addEventListener('click', async () => {
+    const val = nicknameIn.value.trim()
+    if (!val) return
+    nicknameSave.disabled = true
+    nicknameSave.textContent = '...'
+    try {
+      await updateUserProfile({ nickname: val })
+      document.getElementById('profile-display-name').textContent = val
+      document.getElementById('profile-avatar').textContent = val[0].toUpperCase()
+      nicknameSave.textContent = t('profile.nickname.saved')
+      setTimeout(() => {
+        nicknameSave.textContent = t('profile.nickname.save')
+        nicknameSave.disabled = false
+      }, 1500)
+    } catch (e) {
+      alert(e.message)
+      nicknameSave.textContent = t('profile.nickname.save')
+      nicknameSave.disabled = false
+    }
+  })
+
+  // ── Clear recipes ──────────────────────────────────────────────────────────
+  document.getElementById('clear-recipes-btn').addEventListener('click', async () => {
+    if (_recipesCount === 0) return
+    if (!confirm(t('profile.confirm.clear.recipes'))) return
+    const btn = document.getElementById('clear-recipes-btn')
+    btn.disabled = true
+    try {
+      await deleteAllMyRecipes()
+      _recipesCount = 0
+      document.getElementById('recipes-count-val').textContent = 0
+    } catch (e) {
+      alert(e.message)
+    }
+    btn.disabled = _recipesCount === 0
+  })
+
+  // ── Clear techniques ───────────────────────────────────────────────────────
+  document.getElementById('clear-techniques-btn').addEventListener('click', async () => {
+    if (_techniquesCount === 0) return
+    if (!confirm(t('profile.confirm.clear.techniques'))) return
+    const btn = document.getElementById('clear-techniques-btn')
+    btn.disabled = true
+    try {
+      await deleteAllCustomTechniques()
+      _techniquesCount = 0
+      document.getElementById('techniques-count-val').textContent = 0
+    } catch (e) {
+      alert(e.message)
+    }
+    btn.disabled = _techniquesCount === 0
+  })
+
+  // ── Sign out ───────────────────────────────────────────────────────────────
+  document.getElementById('signout-btn').addEventListener('click', async () => {
+    await logOut()
+    window.location.href = 'index.html'
+  })
+  </script>
+</body>
+</html>

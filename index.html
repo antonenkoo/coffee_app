@@ -25,11 +25,6 @@
 
   <header style="display:flex;align-items:center;gap:12px;">
     <h1 style="flex:1;">☕ Brew Calculator</h1>
-    <div class="lang-switcher">
-      <button class="lang-btn" data-lang="ru">RU</button>
-      <button class="lang-btn" data-lang="uk">UA</button>
-      <button class="lang-btn" data-lang="en">EN</button>
-    </div>
   </header>
 
   <main>
@@ -75,9 +70,18 @@
         <label for="coffee-input" data-i18n="param.coffee">Coffee</label>
         <div class="param-field">
           <div class="param-input-wrap">
+            <button class="stepper-btn" data-field="coffee" data-dir="-1">−</button>
             <input id="coffee-input" type="number" step="0.5" min="5" max="100">
+            <button class="stepper-btn" data-field="coffee" data-dir="1">+</button>
             <span class="unit">g</span>
             <span id="coffee-ghost" class="param-ghost hidden"></span>
+          </div>
+          <div class="param-presets">
+            <button class="preset-chip" data-field="coffee" data-val="12">12g</button>
+            <button class="preset-chip" data-field="coffee" data-val="15">15g</button>
+            <button class="preset-chip" data-field="coffee" data-val="18">18g</button>
+            <button class="preset-chip" data-field="coffee" data-val="20">20g</button>
+            <button class="preset-chip" data-field="coffee" data-val="22">22g</button>
           </div>
           <span class="field-error hidden" id="coffee-error"></span>
         </div>
@@ -87,9 +91,17 @@
         <label for="water-input" data-i18n="param.water">Water</label>
         <div class="param-field">
           <div class="param-input-wrap">
+            <button class="stepper-btn" data-field="water" data-dir="-1">−</button>
             <input id="water-input" type="number" step="5" min="50" max="1000">
+            <button class="stepper-btn" data-field="water" data-dir="1">+</button>
             <span class="unit">g</span>
             <span id="water-ghost" class="param-ghost hidden"></span>
+          </div>
+          <div class="param-presets">
+            <button class="preset-chip" data-field="water" data-val="200">200ml</button>
+            <button class="preset-chip" data-field="water" data-val="250">250ml</button>
+            <button class="preset-chip" data-field="water" data-val="300">300ml</button>
+            <button class="preset-chip" data-field="water" data-val="360">360ml</button>
           </div>
           <span class="field-error hidden" id="water-error"></span>
         </div>
@@ -101,6 +113,7 @@
           <div class="param-input-wrap ratio-wrap">
             <span class="ratio-prefix">1:</span>
             <input id="ratio-input" type="number" step="0.1" min="8" max="20">
+            <button id="ratio-lock-btn" class="ratio-lock-btn" title="Зафиксировать соотношение (вода/кофе будут пересчитываться)">🔗</button>
             <button id="ratio-apply-btn" data-i18n="param.apply" data-i18n-title="param.apply" title="Apply new ratio">Apply</button>
             <span id="ratio-ghost" class="param-ghost hidden"></span>
           </div>
@@ -112,9 +125,17 @@
         <label for="temp-input" data-i18n="param.temperature">Temperature</label>
         <div class="param-field">
           <div class="param-input-wrap">
+            <button class="stepper-btn" data-field="temp" data-dir="-1">−</button>
             <input id="temp-input" type="number" step="1">
+            <button class="stepper-btn" data-field="temp" data-dir="1">+</button>
             <button id="temp-unit-toggle" class="unit-toggle">°C</button>
             <span id="temp-ghost" class="param-ghost hidden"></span>
+          </div>
+          <div class="param-presets">
+            <button class="preset-chip" data-field="temp" data-val="88">88°</button>
+            <button class="preset-chip" data-field="temp" data-val="91">91°</button>
+            <button class="preset-chip" data-field="temp" data-val="93">93°</button>
+            <button class="preset-chip" data-field="temp" data-val="95">95°</button>
           </div>
           <span class="field-error hidden" id="temp-error"></span>
           <span class="field-hint hidden" id="temp-hint"></span>
@@ -191,6 +212,7 @@
           <span class="technique-desc" data-i18n="tech.46.desc">40% → 3×20%. Победитель World Brewers Cup 2016. Точный контроль вкуса.</span>
         </button>
       </div>
+      <div id="custom-techniques-list"></div>
     </section>
 
     <!-- BREW Button -->
@@ -250,7 +272,7 @@
 
   <!-- Footer with version link -->
   <footer id="app-footer">
-    <a href="changelog.html" id="version-link">v2.0</a>
+    <a href="changelog.html" id="version-link">v2.1</a>
   </footer>
 
   <!-- Bottom Navigation -->
@@ -267,18 +289,16 @@
       <span class="nav-icon">📚</span>
       <span data-i18n="nav.mine">Мои</span>
     </a>
+    <a href="profile.html" class="nav-btn">
+      <span class="nav-icon">👤</span>
+      <span data-i18n="nav.profile">Профиль</span>
+    </a>
   </nav>
 
   <script type="module" src="app.js"></script>
   <script type="module">
-    import { getLang, setLang, applyI18n } from './js/i18n.js'
+    import { applyI18n } from './js/i18n.js'
     applyI18n()
-    document.querySelectorAll('.lang-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        setLang(btn.dataset.lang)
-        applyI18n()
-      })
-    })
   </script>
   <script>
     // iOS native time picker
