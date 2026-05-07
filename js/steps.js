@@ -7,13 +7,20 @@ import { formatTime } from './calculator.js'
 // start_sec: N    = triggered when timer reaches N seconds
 
 export function getBrewSteps(state) {
-  const { method, coffee_g, water_g, temp_c, brew_time_sec, aeropress_style, pour_technique, grind_manual_microns } = state
-  if (method === 'v60')     return _brewV60(coffee_g, water_g, temp_c, brew_time_sec, pour_technique)
+  const { method, coffee_g, water_g, temp_c, brew_time_sec, aeropress_style, pour_technique, grind_manual_microns, customTechniqueSteps } = state
+  if (method === 'v60')     return _brewV60(coffee_g, water_g, temp_c, brew_time_sec, pour_technique, customTechniqueSteps)
   if (method === 'filter')  return _brewFilter(coffee_g, water_g, brew_time_sec, grind_manual_microns)
   return _brewAeropress(coffee_g, water_g, temp_c, aeropress_style, brew_time_sec)
 }
 
-function _brewV60(coffee_g, water_g, temp_c, brew_time_sec, technique) {
+function _brewV60(coffee_g, water_g, temp_c, brew_time_sec, technique, customSteps) {
+  if (technique?.startsWith('custom-') && customSteps) {
+    return customSteps.split('\n').filter(l => l.trim()).map((line, i) => ({
+      start_sec: i === 0 ? 0 : null,
+      action: line.trim(),
+      note: null,
+    }))
+  }
   switch (technique) {
     case '1-pour': return _brewV60OnePour(coffee_g, water_g, temp_c, brew_time_sec)
     case '46':     return _brewV60FourSix(coffee_g, water_g, temp_c, brew_time_sec)
@@ -110,15 +117,22 @@ function _brewAeropress(coffee_g, water_g, temp_c, style, brew_time_sec) {
  * Each step: { time, action, note }
  */
 export function getSteps(state) {
-  const { method, coffee_g, water_g, temp_c, brew_time_sec, aeropress_style, pour_technique, grind_manual_microns } = state
-  if (method === 'v60')    return _v60Steps(coffee_g, water_g, temp_c, brew_time_sec, pour_technique)
+  const { method, coffee_g, water_g, temp_c, brew_time_sec, aeropress_style, pour_technique, grind_manual_microns, customTechniqueSteps } = state
+  if (method === 'v60')    return _v60Steps(coffee_g, water_g, temp_c, brew_time_sec, pour_technique, customTechniqueSteps)
   if (method === 'filter') return _filterStepsUI(coffee_g, water_g, brew_time_sec, grind_manual_microns)
   return _aeropressSteps(coffee_g, water_g, temp_c, aeropress_style, brew_time_sec)
 }
 
 // ─── V60 dispatcher ─────────────────────────────────────────────────────────────────
 
-function _v60Steps(coffee_g, water_g, temp_c, brew_time_sec, technique) {
+function _v60Steps(coffee_g, water_g, temp_c, brew_time_sec, technique, customSteps) {
+  if (technique?.startsWith('custom-') && customSteps) {
+    return customSteps.split('\n').filter(l => l.trim()).map(line => ({
+      time: '—',
+      action: line.trim(),
+      note: null,
+    }))
+  }
   switch (technique) {
     case '1-pour': return _v60OnePour(coffee_g, water_g, temp_c, brew_time_sec)
     case '46':     return _v60FourSix(coffee_g, water_g, temp_c, brew_time_sec)

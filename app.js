@@ -17,7 +17,7 @@ import { FILTER }    from './data/filter.js'
 import { findMatchingRecipe, getRecipeById } from './js/RecipeService.js'
 import { checkIsPossible, calcFilterBrewTime } from './js/CalculationEngine.js'
 import { getBrewSteps } from './js/steps.js'
-import { auth, signIn, signUp, signInWithGoogle } from './js/firebase.js'
+import { auth, signIn, signUp, signInWithGoogle, loadCustomTechniques } from './js/firebase.js'
 import { t } from './js/i18n.js'
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js'
 
@@ -37,7 +37,54 @@ function showAuthError(msg) {
 // Overlay starts hidden (display:none in HTML); we only show it when confirmed no user.
 onAuthStateChanged(auth, (user) => {
   authOverlay.style.display = user ? 'none' : 'flex'
+  if (user) _loadAndRenderCustomTechniques()
 })
+
+async function _loadAndRenderCustomTechniques() {
+  try {
+    const techniques = await loadCustomTechniques()
+    _renderCustomTechniques(techniques)
+  } catch (e) {
+    console.error('Failed to load custom techniques:', e)
+  }
+}
+
+function _renderCustomTechniques(techniques) {
+  const list = document.getElementById('custom-techniques-list')
+  if (!list) return
+  list.innerHTML = ''
+  techniques.forEach(tech => {
+    const btn = document.createElement('button')
+    btn.className = 'technique-card'
+    btn.dataset.technique = `custom-${tech.id}`
+    btn.innerHTML = `
+      <span class="technique-name">${tech.name}</span>
+      ${tech.description ? `<span class="technique-desc">${tech.description}</span>` : ''}`
+    btn.addEventListener('click', () => {
+      const techId = `custom-${tech.id}`
+      if (state.template !== null) {
+        const recipe = getRecipeById(state.template)
+        const name = recipe?.name ?? 'текущий рецепт'
+        if (!confirm(`Смена техники изменит шаги — это уже не оригинальный рецепт «${name}». Продолжить?`)) return
+        setState({ template: null, templateOrigin: null })
+        const sel = document.getElementById('template-select')
+        if (sel) sel.value = ''
+        hideTemplateSuggestion()
+        renderTemplateDescription(null)
+      }
+      const newTech = state.pour_technique === techId ? null : techId
+      setState({
+        pour_technique: newTech,
+        customTechniqueSteps: newTech ? (tech.steps || tech.description || '') : null,
+      })
+      document.querySelectorAll('.technique-card[data-technique]').forEach(c => {
+        c.classList.toggle('active', c.dataset.technique === newTech)
+      })
+      renderSteps()
+    })
+    list.appendChild(btn)
+  })
+}
 
 document.getElementById('login-btn').addEventListener('click', async () => {
   authError.style.display = 'none'
@@ -66,6 +113,15 @@ document.getElementById('google-btn').addEventListener('click', async () => {
   }
 })
 
+
+// ─── Ratio Lock ───────────────────────────────────────────────────────────────
+
+let _ratioLocked = false
+
+document.getElementById('ratio-lock-btn')?.addEventListener('click', () => {
+  _ratioLocked = !_ratioLocked
+  document.getElementById('ratio-lock-btn').classList.toggle('active', _ratioLocked)
+})
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -229,9 +285,15 @@ document.getElementById('coffee-input').addEventListener('input', (e) => {
     return
   }
   setFieldError('coffee', null)
-  const ratio = calcRatio(val, state.water_g)
-  setState({ coffee_g: val, ratio })
-  document.getElementById('ratio-input').value = round(ratio, 1)
+  if (_ratioLocked) {
+    const newWater = round(val * state.ratio, 1)
+    setState({ coffee_g: val, water_g: newWater })
+    document.getElementById('water-input').value = round(newWater, 0)
+  } else {
+    const ratio = calcRatio(val, state.water_g)
+    setState({ coffee_g: val, ratio })
+    document.getElementById('ratio-input').value = round(ratio, 1)
+  }
   _afterChange()
 })
 
@@ -246,12 +308,19 @@ document.getElementById('water-input').addEventListener('input', (e) => {
     return
   }
   setFieldError('water', null)
-  const ratio = calcRatio(state.coffee_g, val)
-  const patch = { water_g: val, ratio }
-  // Filter: auto-recalculate brew time from water volume
-  if (state.method === 'filter') patch.brew_time_sec = calcFilterBrewTime(val)
-  setState(patch)
-  document.getElementById('ratio-input').value = round(ratio, 1)
+  if (_ratioLocked) {
+    const newCoffee = round(val / state.ratio, 1)
+    const patch = { water_g: val, coffee_g: newCoffee }
+    if (state.method === 'filter') patch.brew_time_sec = calcFilterBrewTime(val)
+    setState(patch)
+    document.getElementById('coffee-input').value = newCoffee
+  } else {
+    const ratio = calcRatio(state.coffee_g, val)
+    const patch = { water_g: val, ratio }
+    if (state.method === 'filter') patch.brew_time_sec = calcFilterBrewTime(val)
+    setState(patch)
+    document.getElementById('ratio-input').value = round(ratio, 1)
+  }
   _afterChange()
 })
 
@@ -368,7 +437,7 @@ document.querySelectorAll('.technique-card[data-technique]').forEach(card => {
     }
 
     const newTech = state.pour_technique === tech ? null : tech
-    setState({ pour_technique: newTech })
+    setState({ pour_technique: newTech, customTechniqueSteps: null })
     document.querySelectorAll('.technique-card[data-technique]').forEach(c => {
       c.classList.toggle('active', c.dataset.technique === newTech)
     })
@@ -382,14 +451,15 @@ document.getElementById('brew-btn')?.addEventListener('click', () => {
   if (!state.isPossible) return
   const brewSteps = getBrewSteps(state)
   sessionStorage.setItem('brewState', JSON.stringify({
-    method:          state.method,
-    coffee_g:        state.coffee_g,
-    water_g:         state.water_g,
-    ratio:           state.ratio,
-    temp_c:          state.temp_c,
-    brew_time_sec:   state.brew_time_sec,
-    pour_technique:  state.pour_technique,
-    aeropress_style: state.aeropress_style,
+    method:               state.method,
+    coffee_g:             state.coffee_g,
+    water_g:              state.water_g,
+    ratio:                state.ratio,
+    temp_c:               state.temp_c,
+    brew_time_sec:        state.brew_time_sec,
+    pour_technique:       state.pour_technique,
+    customTechniqueSteps: state.customTechniqueSteps,
+    aeropress_style:      state.aeropress_style,
     brewSteps,
   }))
   window.location.href = 'brew.html'
@@ -409,13 +479,51 @@ if (_ext) {
   sessionStorage.removeItem('externalRecipe')
   const methodData = _ext.method === 'v60' ? V60 : _ext.method === 'filter' ? FILTER : AEROPRESS
   setState({
-    method:        _ext.method ?? 'v60',
-    coffee_g:      _ext.coffee_g   ?? methodData.defaults.coffee_g,
-    water_g:       _ext.water_g    ?? methodData.defaults.water_g,
-    ratio:         _ext.ratio      ?? (_ext.water_g / _ext.coffee_g),
-    temp_c:        _ext.temp_c     ?? methodData.defaults.temp_c,
-    brew_time_sec: _ext.brew_time_sec ?? methodData.defaults.brew_time_sec,
-    template: null, templateOrigin: null, pour_technique: null,
+    method:               _ext.method ?? 'v60',
+    coffee_g:             _ext.coffee_g   ?? methodData.defaults.coffee_g,
+    water_g:              _ext.water_g    ?? methodData.defaults.water_g,
+    ratio:                _ext.ratio      ?? (_ext.water_g / _ext.coffee_g),
+    temp_c:               _ext.temp_c     ?? methodData.defaults.temp_c,
+    brew_time_sec:        _ext.brew_time_sec ?? methodData.defaults.brew_time_sec,
+    template:             null,
+    templateOrigin:       null,
+    pour_technique:       _ext.technique ?? null,
+    customTechniqueSteps: _ext.customTechniqueSteps ?? null,
   })
+  if (_ext.technique) {
+    document.querySelectorAll('.technique-card[data-technique]').forEach(c => {
+      c.classList.toggle('active', c.dataset.technique === _ext.technique)
+    })
+  }
   renderAll()
 }
+
+// ─── Steppers ─────────────────────────────────────────────────────────────────
+
+document.querySelectorAll('.stepper-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const field = btn.dataset.field
+    const dir = parseInt(btn.dataset.dir)
+    const inputId = field === 'coffee' ? 'coffee-input' : field === 'water' ? 'water-input' : 'temp-input'
+    const input = document.getElementById(inputId)
+    if (!input) return
+    const step = parseFloat(input.step) || 1
+    const newVal = Math.round((parseFloat(input.value || 0) + dir * step) * 100) / 100
+    input.value = newVal
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+  })
+})
+
+// ─── Preset Chips ─────────────────────────────────────────────────────────────
+
+document.querySelectorAll('.preset-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    const field = chip.dataset.field
+    const val = chip.dataset.val
+    const inputId = field === 'coffee' ? 'coffee-input' : field === 'water' ? 'water-input' : 'temp-input'
+    const input = document.getElementById(inputId)
+    if (!input) return
+    input.value = val
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+  })
+})
