@@ -17,7 +17,8 @@ import { FILTER }    from '../../data/filter.js'
 import { findMatchingRecipe, getRecipeById } from '../RecipeService.js'
 import { checkIsPossible, calcFilterBrewTime } from '../CalculationEngine.js'
 import { getBrewSteps } from '../steps.js'
-import { auth, loadCustomTechniques } from '../firebase.js'
+import { auth, loadCustomTechniques, saveMyRecipe, saveCustomTechnique } from '../firebase.js'
+import { isGuest, showAuthOverlay } from '../auth-manager.js'
 import { t } from '../i18n.js'
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js'
 
@@ -210,9 +211,10 @@ export const calculatorView = {
       <div id="custom-techniques-list"></div>
     </section>
 
-    <!-- BREW Button -->
+    <!-- BREW Button + Save -->
     <div id="brew-section">
       <button id="brew-btn" data-i18n="btn.brew">▶&nbsp;&nbsp;BREW</button>
+      <button id="save-recipe-btn" class="save-recipe-link">Сохранить рецепт</button>
     </div>
 
     <!-- Warnings -->
@@ -256,6 +258,49 @@ export const calculatorView = {
           <button id="modal-cancel" class="btn-secondary" data-i18n="modal.cancel">Cancel</button>
           <button id="modal-apply" class="btn-primary" data-i18n="modal.apply">Apply</button>
         </div>
+      </div>
+    </div>
+
+    <!-- Quick Save Recipe Modal -->
+    <div id="calc-save-overlay" class="calc-modal-overlay">
+      <div class="calc-modal">
+        <div class="calc-modal-header">
+          <span>Сохранить рецепт</span>
+          <button class="calc-modal-close" id="calc-save-close">×</button>
+        </div>
+        <div id="calc-save-preview" class="calc-modal-preview"></div>
+        <div class="calc-modal-field">
+          <label class="calc-modal-label">Зерно</label>
+          <input id="calc-save-bean" type="text" class="calc-modal-input" placeholder="Эфиопия, светлая обжарка...">
+        </div>
+        <div class="calc-modal-field">
+          <label class="calc-modal-label">Заметки</label>
+          <textarea id="calc-save-notes" class="calc-modal-input" placeholder="Впечатления, что изменить..."></textarea>
+        </div>
+        <button id="calc-save-confirm" class="calc-modal-save">Сохранить</button>
+      </div>
+    </div>
+
+    <!-- Create Technique Modal -->
+    <div id="calc-tech-overlay" class="calc-modal-overlay">
+      <div class="calc-modal">
+        <div class="calc-modal-header">
+          <span>Новая техника</span>
+          <button class="calc-modal-close" id="calc-tech-close">×</button>
+        </div>
+        <div class="calc-modal-field">
+          <label class="calc-modal-label">Название</label>
+          <input id="calc-tech-name" type="text" class="calc-modal-input" placeholder="Агрессивный блум, Быстрый пролив...">
+        </div>
+        <div class="calc-modal-field">
+          <label class="calc-modal-label">Описание</label>
+          <input id="calc-tech-desc" type="text" class="calc-modal-input" placeholder="Краткое описание">
+        </div>
+        <div class="calc-modal-field">
+          <label class="calc-modal-label">Шаги</label>
+          <textarea id="calc-tech-steps" class="calc-modal-input" placeholder="Каждый шаг с новой строки:&#10;Bloom: 30г, 40 сек&#10;Пролив 1: до 150г"></textarea>
+        </div>
+        <button id="calc-tech-save-btn" class="calc-modal-save">Создать технику</button>
       </div>
     </div>`
   },
@@ -463,6 +508,91 @@ export const calculatorView = {
       })
     })
 
+    // ── Save Recipe (quick save) ─────────────────────────────────────────────
+    document.getElementById('save-recipe-btn')?.addEventListener('click', () => {
+      if (isGuest() || !auth.currentUser) { showAuthOverlay(); return }
+      const METHOD_LABELS = { v60: 'V60', aeropress: 'AeroPress', filter: 'Filter' }
+      const TECH_LABELS   = { '3-pour': '3 пролива', '1-pour': 'Один пролив', '46': '4:6 метод' }
+      const fmtTime = (s) => { if (!s) return ''; const m = Math.floor(s/60); return `${m}:${String(s%60).padStart(2,'0')}` }
+      const techName = state.pour_technique
+        ? (TECH_LABELS[state.pour_technique] || state.pour_technique.replace(/^custom-/, ''))
+        : null
+      const preview = [
+        METHOD_LABELS[state.method] ?? state.method,
+        techName ? `⇢ ${techName}` : null,
+      ].filter(Boolean).join(' · ') + '\n' + [
+        state.coffee_g ? `${state.coffee_g}г кофе` : null,
+        state.water_g  ? `${state.water_g}мл воды` : null,
+        state.ratio    ? `1:${(+state.ratio).toFixed(1)}` : null,
+        state.method !== 'filter' && state.temp_c ? `${state.temp_c}°C` : null,
+        state.brew_time_sec ? fmtTime(state.brew_time_sec) : null,
+      ].filter(Boolean).join(' · ')
+      document.getElementById('calc-save-preview').textContent = preview
+      document.getElementById('calc-save-bean').value = ''
+      document.getElementById('calc-save-notes').value = ''
+      document.getElementById('calc-save-confirm').disabled = false
+      document.getElementById('calc-save-confirm').textContent = 'Сохранить'
+      document.getElementById('calc-save-overlay').classList.add('visible')
+    })
+    document.getElementById('calc-save-close').addEventListener('click', () =>
+      document.getElementById('calc-save-overlay').classList.remove('visible')
+    )
+    document.getElementById('calc-save-overlay').addEventListener('click', (e) => {
+      if (e.target === document.getElementById('calc-save-overlay'))
+        document.getElementById('calc-save-overlay').classList.remove('visible')
+    })
+    document.getElementById('calc-save-confirm').addEventListener('click', async () => {
+      const btn = document.getElementById('calc-save-confirm')
+      btn.disabled = true; btn.textContent = 'Сохранение...'
+      try {
+        await saveMyRecipe({
+          method: state.method,
+          coffee_g: state.coffee_g,
+          water_g: state.water_g,
+          ratio: state.ratio,
+          temp_c: state.temp_c,
+          brew_time_sec: state.brew_time_sec,
+          technique: state.pour_technique ?? null,
+          customTechniqueSteps: state.customTechniqueSteps ?? null,
+          aeropress_style: state.aeropress_style ?? null,
+          bean: document.getElementById('calc-save-bean').value.trim() || null,
+          notes: document.getElementById('calc-save-notes').value.trim() || null,
+        })
+        btn.textContent = '✓ Сохранено!'
+        setTimeout(() => document.getElementById('calc-save-overlay').classList.remove('visible'), 900)
+      } catch (e) {
+        alert(`Ошибка: ${e.message}`)
+        btn.disabled = false; btn.textContent = 'Сохранить'
+      }
+    })
+
+    // ── Create Technique Modal ────────────────────────────────────────────────
+    document.getElementById('calc-tech-close').addEventListener('click', () =>
+      document.getElementById('calc-tech-overlay').classList.remove('visible')
+    )
+    document.getElementById('calc-tech-overlay').addEventListener('click', (e) => {
+      if (e.target === document.getElementById('calc-tech-overlay'))
+        document.getElementById('calc-tech-overlay').classList.remove('visible')
+    })
+    document.getElementById('calc-tech-save-btn').addEventListener('click', async () => {
+      const name  = document.getElementById('calc-tech-name').value.trim()
+      const desc  = document.getElementById('calc-tech-desc').value.trim()
+      const steps = document.getElementById('calc-tech-steps').value.trim()
+      if (!name) { alert('Введите название техники'); return }
+      const btn = document.getElementById('calc-tech-save-btn')
+      btn.disabled = true; btn.textContent = 'Создание...'
+      try {
+        await saveCustomTechnique({ name, description: desc, steps })
+        document.getElementById('calc-tech-name').value  = ''
+        document.getElementById('calc-tech-desc').value  = ''
+        document.getElementById('calc-tech-steps').value = ''
+        document.getElementById('calc-tech-overlay').classList.remove('visible')
+        _loadCustomTechniques()
+      } catch (e) {
+        alert(`Ошибка: ${e.message}`)
+      } finally { btn.disabled = false; btn.textContent = 'Создать технику' }
+    })
+
     // ── Brew Button ─────────────────────────────────────────────────────────────
     document.getElementById('brew-btn')?.addEventListener('click', () => {
       if (!state.isPossible) return
@@ -583,6 +713,18 @@ function _renderCustomTechniques(techniques) {
     })
     list.appendChild(btn)
   })
+  // "+ Создать технику" card
+  const createCard = document.createElement('button')
+  createCard.className = 'technique-card technique-card--create'
+  createCard.textContent = '+ Создать технику'
+  createCard.addEventListener('click', () => {
+    document.getElementById('calc-tech-name').value  = ''
+    document.getElementById('calc-tech-desc').value  = ''
+    document.getElementById('calc-tech-steps').value = ''
+    document.getElementById('calc-tech-overlay').classList.add('visible')
+    setTimeout(() => document.getElementById('calc-tech-name')?.focus(), 50)
+  })
+  list.appendChild(createCard)
 }
 
 function _afterChange() {

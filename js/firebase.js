@@ -153,6 +153,13 @@ export async function loadCustomTechniques() {
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
 
+/** Update a custom technique. */
+export async function updateCustomTechnique(id, data) {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Необходимо войти');
+  return updateDoc(doc(db, 'users', user.uid, 'techniques', id), data);
+}
+
 /** Delete a custom technique. */
 export async function deleteCustomTechnique(id) {
   const user = auth.currentUser;

@@ -1,5 +1,5 @@
 // js/views/recipes.js
-import { auth, loadMyRecipes, deleteMyRecipe, updateMyRecipe, saveMyRecipe, loadCustomTechniques, saveCustomTechnique, deleteCustomTechnique } from '../firebase.js'
+import { auth, loadMyRecipes, deleteMyRecipe, updateMyRecipe, saveMyRecipe, loadCustomTechniques, saveCustomTechnique, updateCustomTechnique, deleteCustomTechnique } from '../firebase.js'
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js'
 import { GRINDERS } from '../grinders.js'
 import { t, applyI18n } from '../i18n.js'
@@ -164,6 +164,29 @@ export const recipesView = {
           <textarea id="edit-notes" class="edit-input edit-input--full" placeholder="Впечатления, что изменить..."></textarea>
         </div>
         <button id="edit-save-btn" class="edit-save-btn">Сохранить изменения</button>
+      </div>
+    </div>
+
+    <!-- Technique Edit Modal -->
+    <div id="tech-edit-overlay" class="calc-modal-overlay">
+      <div class="calc-modal">
+        <div class="calc-modal-header">
+          <span>Редактировать технику</span>
+          <button class="calc-modal-close" id="tech-edit-close">×</button>
+        </div>
+        <div class="calc-modal-field">
+          <label class="calc-modal-label">Название</label>
+          <input id="tech-edit-name" type="text" class="calc-modal-input">
+        </div>
+        <div class="calc-modal-field">
+          <label class="calc-modal-label">Описание</label>
+          <input id="tech-edit-desc" type="text" class="calc-modal-input" placeholder="Краткое описание">
+        </div>
+        <div class="calc-modal-field">
+          <label class="calc-modal-label">Шаги</label>
+          <textarea id="tech-edit-steps" class="calc-modal-input" placeholder="Каждый шаг с новой строки"></textarea>
+        </div>
+        <button id="tech-edit-save-btn" class="calc-modal-save">Сохранить изменения</button>
       </div>
     </div>`
   },
@@ -397,6 +420,50 @@ export const recipesView = {
       document.getElementById('edit-save-btn').disabled = false
     }
 
+    // ── Technique edit modal ────────────────────────────────────────────────────
+    let _editTechId = null
+
+    function openTechEditModal(tech) {
+      _editTechId = tech.id
+      document.getElementById('tech-edit-name').value  = tech.name || ''
+      document.getElementById('tech-edit-desc').value  = tech.description || ''
+      document.getElementById('tech-edit-steps').value = tech.steps || ''
+      document.getElementById('tech-edit-save-btn').disabled = false
+      document.getElementById('tech-edit-save-btn').textContent = 'Сохранить изменения'
+      document.getElementById('tech-edit-overlay').classList.add('visible')
+    }
+
+    document.getElementById('tech-edit-close').addEventListener('click', () =>
+      document.getElementById('tech-edit-overlay').classList.remove('visible')
+    )
+    document.getElementById('tech-edit-overlay').addEventListener('click', (e) => {
+      if (e.target === document.getElementById('tech-edit-overlay'))
+        document.getElementById('tech-edit-overlay').classList.remove('visible')
+    })
+    document.getElementById('tech-edit-save-btn').addEventListener('click', async () => {
+      if (!_editTechId) return
+      const btn = document.getElementById('tech-edit-save-btn')
+      btn.disabled = true; btn.textContent = 'Сохранение...'
+      const name  = document.getElementById('tech-edit-name').value.trim()
+      const description = document.getElementById('tech-edit-desc').value.trim()
+      const steps = document.getElementById('tech-edit-steps').value.trim()
+      if (!name) {
+        alert('Введите название')
+        btn.disabled = false; btn.textContent = 'Сохранить изменения'
+        return
+      }
+      try {
+        await updateCustomTechnique(_editTechId, { name, description, steps })
+        const idx = _customTechniques.findIndex(tc => tc.id === _editTechId)
+        if (idx !== -1) _customTechniques[idx] = { ..._customTechniques[idx], name, description, steps }
+        renderTechList(_customTechniques)
+        document.getElementById('tech-edit-overlay').classList.remove('visible')
+      } catch (e) {
+        alert(`Ошибка: ${e.message}`)
+        btn.disabled = false; btn.textContent = 'Сохранить изменения'
+      }
+    })
+
     document.getElementById('edit-close').addEventListener('click', () =>
       document.getElementById('edit-modal-overlay').classList.remove('visible')
     )
@@ -579,7 +646,11 @@ export const recipesView = {
             <div class="tech-item-name">${tech.name}</div>
             ${tech.description ? `<div class="tech-item-desc">${tech.description}</div>` : ''}
           </div>
-          <button class="btn-del-tech" data-id="${tech.id}">Удалить</button>`
+          <div class="tech-item-actions">
+            <button class="btn-edit-tech" data-id="${tech.id}">Изменить</button>
+            <button class="btn-del-tech" data-id="${tech.id}">Удалить</button>
+          </div>`
+        item.querySelector('.btn-edit-tech').addEventListener('click', () => openTechEditModal(tech))
         item.querySelector('.btn-del-tech').addEventListener('click', async () => {
           if (!confirm(`Удалить технику «${tech.name}»?`)) return
           try {
