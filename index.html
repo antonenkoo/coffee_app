@@ -6,334 +6,61 @@
   <title>Coffee Brew Calculator</title>
   <link rel="stylesheet" href="style.css">
 </head>
-<body class="has-bottom-nav">
+<body>
 
-  <!-- Registration Overlay: hidden by default, shown only after Firebase confirms no user -->
+  <!-- Auth Overlay -->
   <div id="auth-overlay" class="modal-overlay" style="display:none">
     <div class="modal-content">
       <h2 id="auth-title" data-i18n="auth.title">Вход / Регистрация</h2>
       <input type="email" id="email-input" data-i18n="auth.email" placeholder="Email">
       <input type="password" id="pass-input" data-i18n="auth.password" placeholder="Пароль">
-      <div style="display: flex; gap: 10px;">
+      <div style="display:flex;gap:10px;">
         <button id="login-btn" class="btn-primary" data-i18n="auth.login">Войти</button>
         <button id="signup-btn" class="btn-secondary" data-i18n="auth.signup">Регистрация</button>
       </div>
       <button id="google-btn" class="btn-secondary" data-i18n="auth.google">Войти через Google</button>
-      <p id="auth-error" style="color: var(--warning); display:none;"></p>
+      <button id="guest-btn" class="btn-ghost" data-i18n="auth.guest">Продолжить без регистрации</button>
+      <p id="auth-error" style="color:var(--warning);display:none;"></p>
     </div>
   </div>
 
-  <header style="display:flex;align-items:center;gap:12px;">
-    <h1 style="flex:1;">☕ Brew Calculator</h1>
+  <!-- Sidebar Backdrop -->
+  <div id="sidebar-backdrop"></div>
+
+  <!-- Sidebar -->
+  <aside id="sidebar">
+    <div class="sidebar-header">☕ Coffee Brew</div>
+    <nav class="sidebar-nav">
+      <a href="#calculator" class="sidebar-nav-btn active">
+        <span class="sidebar-nav-icon">⚗️</span>
+        <span data-i18n="nav.calc">Калькулятор</span>
+      </a>
+      <a href="#feed" class="sidebar-nav-btn">
+        <span class="sidebar-nav-icon">🌐</span>
+        <span data-i18n="nav.feed">Feed</span>
+      </a>
+      <a href="#recipes" class="sidebar-nav-btn">
+        <span class="sidebar-nav-icon">📚</span>
+        <span data-i18n="nav.mine">Мои рецепты</span>
+      </a>
+      <a href="#profile" class="sidebar-nav-btn">
+        <span class="sidebar-nav-icon">👤</span>
+        <span data-i18n="nav.profile">Профиль</span>
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <a href="changelog.html" id="version-link">v2.3</a>
+    </div>
+  </aside>
+
+  <!-- App Shell -->
+  <header>
+    <button id="burger-btn" aria-label="Меню">☰</button>
+    <h1 id="page-title">☕ Brew Calculator</h1>
   </header>
 
-  <main>
-
-    <!-- Method Selector + Reset -->
-    <div class="method-row">
-      <section id="method-selector">
-        <button class="method-btn active" data-method="v60">V60</button>
-        <button class="method-btn" data-method="aeropress">AeroPress</button>
-        <button class="method-btn" data-method="filter">Filter</button>
-      </section>
-      <button id="reset-btn" title="Сбросить к дефолтам">↺</button>
-    </div>
-
-    <!-- Recipe Template Selector -->
-    <div id="template-row">
-      <select id="template-select"></select>
-      <p id="template-description" class="hidden"></p>
-    </div>
-
-    <!-- Template Match Suggestion Banner -->
-    <div id="template-suggestion" class="hidden">
-      <span id="suggestion-text"></span>
-      <div class="suggestion-actions">
-        <button id="suggestion-apply">Применить</button>
-        <button id="suggestion-dismiss">✕</button>
-      </div>
-    </div>
-
-    <!-- AeroPress style toggle (hidden for V60) -->
-    <div id="aeropress-style-row" class="style-row" style="display:none">
-      <span class="style-label">Style</span>
-      <div class="style-toggle">
-        <button class="style-btn" data-style="standard">Standard</button>
-        <button class="style-btn active" data-style="inverted">Inverted</button>
-      </div>
-    </div>
-
-    <!-- Parameters -->
-    <section id="parameters">
-
-      <div class="param-row">
-        <label for="coffee-input" data-i18n="param.coffee">Coffee</label>
-        <div class="param-field">
-          <div class="param-input-wrap">
-            <button class="stepper-btn" data-field="coffee" data-dir="-1">−</button>
-            <input id="coffee-input" type="number" step="0.5" min="5" max="100">
-            <button class="stepper-btn" data-field="coffee" data-dir="1">+</button>
-            <span class="unit">g</span>
-            <span id="coffee-ghost" class="param-ghost hidden"></span>
-          </div>
-          <div class="param-presets">
-            <button class="preset-chip" data-field="coffee" data-val="12">12g</button>
-            <button class="preset-chip" data-field="coffee" data-val="15">15g</button>
-            <button class="preset-chip" data-field="coffee" data-val="18">18g</button>
-            <button class="preset-chip" data-field="coffee" data-val="20">20g</button>
-            <button class="preset-chip" data-field="coffee" data-val="22">22g</button>
-          </div>
-          <span class="field-error hidden" id="coffee-error"></span>
-        </div>
-      </div>
-
-      <div class="param-row">
-        <label for="water-input" data-i18n="param.water">Water</label>
-        <div class="param-field">
-          <div class="param-input-wrap">
-            <button class="stepper-btn" data-field="water" data-dir="-1">−</button>
-            <input id="water-input" type="number" step="5" min="50" max="1000">
-            <button class="stepper-btn" data-field="water" data-dir="1">+</button>
-            <span class="unit">g</span>
-            <span id="water-ghost" class="param-ghost hidden"></span>
-          </div>
-          <div class="param-presets">
-            <button class="preset-chip" data-field="water" data-val="200">200ml</button>
-            <button class="preset-chip" data-field="water" data-val="250">250ml</button>
-            <button class="preset-chip" data-field="water" data-val="300">300ml</button>
-            <button class="preset-chip" data-field="water" data-val="360">360ml</button>
-          </div>
-          <span class="field-error hidden" id="water-error"></span>
-        </div>
-      </div>
-
-      <div class="param-row ratio-row">
-        <label for="ratio-input" data-i18n="param.ratio">Brew Ratio</label>
-        <div class="param-field">
-          <div class="param-input-wrap ratio-wrap">
-            <span class="ratio-prefix">1:</span>
-            <input id="ratio-input" type="number" step="0.1" min="8" max="20">
-            <button id="ratio-lock-btn" class="ratio-lock-btn" title="Зафиксировать соотношение (вода/кофе будут пересчитываться)">🔗</button>
-            <button id="ratio-apply-btn" data-i18n="param.apply" data-i18n-title="param.apply" title="Apply new ratio">Apply</button>
-            <span id="ratio-ghost" class="param-ghost hidden"></span>
-          </div>
-          <span class="field-error hidden" id="ratio-error"></span>
-        </div>
-      </div>
-
-      <div class="param-row" id="param-row-temp">
-        <label for="temp-input" data-i18n="param.temperature">Temperature</label>
-        <div class="param-field">
-          <div class="param-input-wrap">
-            <button class="stepper-btn" data-field="temp" data-dir="-1">−</button>
-            <input id="temp-input" type="number" step="1">
-            <button class="stepper-btn" data-field="temp" data-dir="1">+</button>
-            <button id="temp-unit-toggle" class="unit-toggle">°C</button>
-            <span id="temp-ghost" class="param-ghost hidden"></span>
-          </div>
-          <div class="param-presets">
-            <button class="preset-chip" data-field="temp" data-val="88">88°</button>
-            <button class="preset-chip" data-field="temp" data-val="91">91°</button>
-            <button class="preset-chip" data-field="temp" data-val="93">93°</button>
-            <button class="preset-chip" data-field="temp" data-val="95">95°</button>
-          </div>
-          <span class="field-error hidden" id="temp-error"></span>
-          <span class="field-hint hidden" id="temp-hint"></span>
-        </div>
-      </div>
-
-      <div class="param-row" id="param-row-time">
-        <label for="time-input" data-i18n="param.brewtime">Brew Time</label>
-        <div class="param-field">
-          <div class="param-input-wrap">
-            <!-- iOS native time wheel via <input type="time"> wrapped in custom trigger -->
-            <input id="time-input" type="text" placeholder="3:00" inputmode="numeric">
-            <input id="time-input-native" type="time" step="1"
-                   style="position:absolute;opacity:0;pointer-events:none;width:1px;height:1px;">
-            <span class="unit">min</span>
-            <span id="time-ghost" class="param-ghost hidden"></span>
-          </div>
-          <span class="field-error hidden" id="time-error"></span>
-          <span class="field-hint hidden" id="time-hint"></span>
-        </div>
-      </div>
-
-      <div class="param-row grind-row" id="param-row-grind-calc">
-        <label data-i18n="param.grindsize">Grind Size</label>
-        <div class="param-input-wrap grind-display">
-          <span id="grind-microns" class="grind-value">—</span>
-          <span class="unit">мкм</span>
-          <span class="grind-sep">·</span>
-          <span id="grind-clicks" class="grind-value">—</span>
-          <span class="unit">кл C40</span>
-        </div>
-      </div>
-
-      <!-- Filter only: manual grind input -->
-      <div class="param-row hidden" id="param-row-filter-grind">
-        <label for="filter-grind-input" data-i18n="param.grind.manual">Помол</label>
-        <div class="param-field">
-          <div class="param-input-wrap">
-            <input id="filter-grind-input" type="number" step="10" min="300" max="1200">
-            <span class="unit">мкм</span>
-          </div>
-          <span class="field-hint" data-i18n="grind.hint">рек. 600–800 мкм для Bravilor ISO</span>
-        </div>
-      </div>
-
-      <!-- Filter only: auto brew time + machine temp -->
-      <div class="param-row hidden" id="param-row-filter-info">
-        <label data-i18n="param.auto">Авто</label>
-        <div class="param-input-wrap">
-          <span id="filter-time-display" class="grind-value">—</span>
-          <span class="unit">мин</span>
-          <span class="grind-sep">·</span>
-          <span class="grind-value">~93°C</span>
-          <span class="unit">(машина)</span>
-        </div>
-      </div>
-
-    </section>
-
-    <!-- Pouring Techniques (V60 only) -->
-    <section id="techniques-section" class="hidden">
-      <div class="techniques-header" data-i18n="section.techniques">Техника пролива</div>
-      <div class="techniques-list">
-        <button class="technique-card" data-technique="3-pour">
-          <span class="technique-name" data-i18n="tech.3pour.name">3 пролива</span>
-          <span class="technique-desc" data-i18n="tech.3pour.desc">Блум → 60% воды → 100%. Классический контроль экстракции.</span>
-        </button>
-        <button class="technique-card" data-technique="1-pour">
-          <span class="technique-name" data-i18n="tech.1pour.name">Один пролив</span>
-          <span class="technique-desc" data-i18n="tech.1pour.desc">Все воды одним непрерывным потоком после блума. Метод Хоффманна.</span>
-        </button>
-        <button class="technique-card technique-card--accent" data-technique="46">
-          <span class="technique-name" data-i18n="tech.46.name">4:6 метод</span>
-          <span class="technique-desc" data-i18n="tech.46.desc">40% → 3×20%. Победитель World Brewers Cup 2016. Точный контроль вкуса.</span>
-        </button>
-      </div>
-      <div id="custom-techniques-list"></div>
-    </section>
-
-    <!-- BREW Button -->
-    <div id="brew-section">
-      <button id="brew-btn" data-i18n="btn.brew">▶&nbsp;&nbsp;BREW</button>
-    </div>
-
-    <!-- Warnings -->
-    <section id="warnings"></section>
-
-    <!-- Recommended Parameters -->
-    <section id="recommended-section">
-      <div class="rec-header">Рекомендуется для этого рецепта</div>
-      <div id="rec-content"></div>
-    </section>
-
-    <!-- Brew Steps + Barista Tips (with Impossible overlay) -->
-    <div id="steps-tips-wrapper">
-
-      <div id="impossible-overlay" class="hidden">
-        <div class="impossible-inner">
-          <span class="impossible-icon">⚠</span>
-          <p class="impossible-title" data-i18n="impossible.title">Невозможные параметры</p>
-          <p class="impossible-sub" data-i18n="impossible.sub">Значения выходят за допустимые пределы метода</p>
-        </div>
-      </div>
-
-      <details id="brew-steps" open>
-        <summary data-i18n="section.brewsteps">Brew Steps</summary>
-        <ol id="steps-list"></ol>
-      </details>
-
-      <section id="barista-tips">
-        <div class="tips-header" data-i18n="section.tips">Barista Tips</div>
-        <ul id="tips-list"></ul>
-      </section>
-
-    </div>
-
-  </main>
-
-  <!-- Ratio Adjust Modal -->
-  <div id="modal-overlay" class="hidden"></div>
-  <div id="ratio-modal" class="modal hidden">
-    <div class="modal-content">
-      <h2 data-i18n="modal.title">Adjust Parameters</h2>
-      <p id="modal-ratio-change" class="modal-subtitle"></p>
-      <p class="modal-question" data-i18n="modal.question">What should change to match the new ratio?</p>
-      <div id="modal-options"></div>
-      <div id="modal-preview" class="modal-preview"></div>
-      <div class="modal-actions">
-        <button id="modal-cancel" class="btn-secondary" data-i18n="modal.cancel">Cancel</button>
-        <button id="modal-apply" class="btn-primary" data-i18n="modal.apply">Apply</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Footer with version link -->
-  <footer id="app-footer">
-    <a href="changelog.html" id="version-link">v2.2</a>
-  </footer>
-
-  <!-- Bottom Navigation -->
-  <nav id="bottom-nav">
-    <a href="index.html" class="nav-btn active">
-      <span class="nav-icon">⚗️</span>
-      <span data-i18n="nav.calc">Калькулятор</span>
-    </a>
-    <a href="feed.html" class="nav-btn">
-      <span class="nav-icon">🌐</span>
-      <span data-i18n="nav.feed">Feed</span>
-    </a>
-    <a href="my-recipes.html" class="nav-btn">
-      <span class="nav-icon">📚</span>
-      <span data-i18n="nav.mine">Мои</span>
-    </a>
-    <a href="profile.html" class="nav-btn">
-      <span class="nav-icon">👤</span>
-      <span data-i18n="nav.profile">Профиль</span>
-    </a>
-  </nav>
+  <main id="view"></main>
 
   <script type="module" src="app.js"></script>
-  <script type="module">
-    import { applyI18n } from './js/i18n.js'
-    applyI18n()
-  </script>
-  <script>
-    // iOS native time picker
-    const timeInput = document.getElementById('time-input')
-    const nativeTime = document.getElementById('time-input-native')
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
-
-    if (isIOS && timeInput && nativeTime) {
-      // On iOS tap -> open native wheel
-      timeInput.addEventListener('focus', (e) => {
-        e.preventDefault()
-        timeInput.blur()
-        nativeTime.style.pointerEvents = 'auto'
-        nativeTime.focus()
-        nativeTime.click()
-      })
-
-      nativeTime.addEventListener('change', () => {
-        const val = nativeTime.value // "03:30" or "03:30:00"
-        if (!val) return
-        const parts = val.split(':')
-        const m = parseInt(parts[0], 10)
-        const s = parseInt(parts[1] || '0', 10)
-        // format as M:SS display
-        const display = `${m}:${String(s).padStart(2, '0')}`
-        timeInput.value = display
-        // trigger app logic
-        timeInput.dispatchEvent(new Event('input', { bubbles: true }))
-        nativeTime.style.pointerEvents = 'none'
-      })
-
-      nativeTime.addEventListener('blur', () => {
-        nativeTime.style.pointerEvents = 'none'
-      })
-    }
-  </script>
 </body>
 </html>

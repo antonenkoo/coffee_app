@@ -130,6 +130,66 @@
   <div class="changelog-wrap">
     <a href="index.html" class="back-btn">← Back to App</a>
 
+    <!-- v2.3 -->
+    <div class="version-block">
+      <div class="version-header">
+        <span class="version-tag">v2.3</span>
+        <span class="version-date">май 2026</span>
+        <span class="version-title">SPA + Sidebar + Guest Mode</span>
+      </div>
+
+      <div class="changelog-group">
+        <div class="changelog-group-label">Архитектура</div>
+
+        <div class="changelog-item">
+          <div class="changelog-dot"></div>
+          <div>Переход на SPA — все экраны переключаются без перезагрузки страницы через hash-роутер (<code>#calculator</code>, <code>#feed</code>, <code>#recipes</code>, <code>#profile</code>) <span class="badge-new">new</span></div>
+        </div>
+        <div class="changelog-item">
+          <div class="changelog-dot"></div>
+          <div>Firebase инициализируется один раз на весь сеанс — исчезли задержки и мигания при переходах <span class="badge-new">new</span></div>
+        </div>
+        <div class="changelog-item">
+          <div class="changelog-dot"></div>
+          <div>Централизованное управление auth-состоянием через <code>auth-manager.js</code> — один <code>onAuthStateChanged</code> на всё приложение <span class="badge-new">new</span></div>
+        </div>
+      </div>
+
+      <div class="changelog-group">
+        <div class="changelog-group-label">Навигация</div>
+
+        <div class="changelog-item">
+          <div class="changelog-dot"></div>
+          <div>Боковое меню (sidebar) — открывается кнопкой ☰ в хедере, заменяет нижнюю панель навигации <span class="badge-new">new</span></div>
+        </div>
+        <div class="changelog-item">
+          <div class="changelog-dot"></div>
+          <div>Версия приложения перенесена в нижнюю часть сайдбара <span class="badge-new">new</span></div>
+        </div>
+        <div class="changelog-item">
+          <div class="changelog-dot"></div>
+          <div>Хедер стал sticky — всегда виден при скролле <span class="badge-new">new</span></div>
+        </div>
+      </div>
+
+      <div class="changelog-group">
+        <div class="changelog-group-label">Гостевой режим</div>
+
+        <div class="changelog-item">
+          <div class="changelog-dot"></div>
+          <div>Кнопка «Продолжить без регистрации» в окне входа — полный доступ без аккаунта <span class="badge-new">new</span></div>
+        </div>
+        <div class="changelog-item">
+          <div class="changelog-dot"></div>
+          <div>Гость: доступен Калькулятор, Feed, Brew Mode; Мои рецепты и Профиль показывают экран входа <span class="badge-new">new</span></div>
+        </div>
+        <div class="changelog-item">
+          <div class="changelog-dot"></div>
+          <div>Гостевой режим сохраняется в <code>localStorage</code> и автоматически сбрасывается при входе через Firebase <span class="badge-new">new</span></div>
+        </div>
+      </div>
+    </div>
+
     <!-- v2.2 -->
     <div class="version-block">
       <div class="version-header">
