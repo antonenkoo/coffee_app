@@ -91,7 +91,7 @@ function _brewAeropress(coffee_g, water_g, temp_c, style, brew_time_sec) {
       { start_sec: null,       action: `Засыпать <b>${coffee_g}г</b> кофе (средний помол)`, note: null },
       // Timer starts here — water hits coffee
       { start_sec: 0,          action: `Залить <b>${water_g}г</b> воды (${temp_c}°C), перемешать 10 сек`, note: 'Таймер пошёл — вода в кофе' },
-      { start_sec: 15,         action: `Настаивание — ждать до ${formatTime(filter_sec)}`, note: 'Не перемешивайте' },
+      { start_sec: 30,         action: `Настаивание — ждать до ${formatTime(filter_sec)}`, note: 'Не перемешивайте' },
       { start_sec: filter_sec, action: 'Установить фильтр, смочить кипятком', note: null },
       { start_sec: steep_sec,  action: 'Перевернуть на кружку, медленно давить 30 сек', note: 'Остановитесь на шипении' },
       { start_sec: done_sec,   action: '☕ Готово!', note: null },
