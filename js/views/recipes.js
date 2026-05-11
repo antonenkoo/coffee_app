@@ -1,5 +1,5 @@
 // js/views/recipes.js
-import { auth, loadMyRecipes, deleteMyRecipe, updateMyRecipe, loadCustomTechniques, saveCustomTechnique, deleteCustomTechnique } from '../firebase.js'
+import { auth, loadMyRecipes, deleteMyRecipe, updateMyRecipe, saveMyRecipe, loadCustomTechniques, saveCustomTechnique, deleteCustomTechnique } from '../firebase.js'
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js'
 import { GRINDERS } from '../grinders.js'
 import { t, applyI18n } from '../i18n.js'
@@ -24,6 +24,10 @@ export const recipesView = {
       <button class="btn-primary guest-signin-btn" style="margin-top:16px;">Войти</button>
     </div>
 
+    <div id="recipes-toolbar" class="hidden">
+      <button id="create-recipe-btn" class="create-recipe-btn">+ Создать рецепт</button>
+    </div>
+
     <div id="techniques-mgmt" class="hidden">
       <div class="tech-mgmt-header">
         <span class="tech-mgmt-title">Мои техники пролива</span>
@@ -45,7 +49,7 @@ export const recipesView = {
     <div id="empty-state" class="hidden">
       <div class="state-icon">☕</div>
       <div data-i18n="myrecipes.empty">У вас пока нет сохранённых рецептов.</div>
-      <div data-i18n="myrecipes.empty.cta">Заварите кофе и нажмите «Записать рецепт»!</div>
+      <div data-i18n="myrecipes.empty.cta">Заварите кофе или создайте рецепт заранее!</div>
     </div>
 
     <div id="error-state" class="hidden">
@@ -55,14 +59,24 @@ export const recipesView = {
 
     <div id="recipes-list" style="display:flex;flex-direction:column;gap:16px;"></div>
 
-    <!-- Edit Modal -->
+    <!-- Edit / Create Modal -->
     <div id="edit-modal-overlay">
       <div id="edit-modal">
         <div class="edit-header">
-          <h2>Редактировать рецепт</h2>
+          <h2 id="edit-modal-title">Редактировать рецепт</h2>
           <button id="edit-close" class="edit-close">×</button>
         </div>
         <div class="edit-section-title">Параметры</div>
+        <div class="edit-row" id="edit-method-row" style="display:none">
+          <span class="edit-label">Метод</span>
+          <div class="edit-input-wrap" style="justify-content:flex-end;">
+            <select id="edit-method" class="edit-input" style="width:auto;min-width:140px;">
+              <option value="v60">V60</option>
+              <option value="aeropress">AeroPress</option>
+              <option value="filter">Filter / Drip</option>
+            </select>
+          </div>
+        </div>
         <div class="edit-row" id="edit-technique-row" style="display:none">
           <span class="edit-label">Техника</span>
           <div class="edit-input-wrap" style="justify-content:flex-end;">
@@ -142,6 +156,9 @@ export const recipesView = {
           <div class="edit-slider-track"></div>
           <span class="edit-slider-val">0</span>
         </div>
+        <div class="edit-section-title">Шаги приготовления <span class="edit-section-hint">опционально</span></div>
+        <div id="edit-steps-list"></div>
+        <button id="edit-add-step" class="edit-add-step-btn">+ Добавить шаг</button>
         <div class="edit-section-title">Заметки</div>
         <div style="padding:4px 0 8px;">
           <textarea id="edit-notes" class="edit-input edit-input--full" placeholder="Впечатления, что изменить..."></textarea>
@@ -191,8 +208,9 @@ export const recipesView = {
     }
 
     // ── Edit modal state ────────────────────────────────────────────────────────
-    let _editRecipeId = null
-    let _editCardEl   = null
+    let _editMode      = 'edit'   // 'edit' | 'create'
+    let _editRecipeId  = null
+    let _editMethod    = null
     let _editTasteValues = { sweetness: 0, acidity: 0, bitterness: 0 }
     let _customTechniques = []
 
@@ -204,6 +222,13 @@ export const recipesView = {
     editGrinderSel.addEventListener('change', () => {
       const g = GRINDERS.find(x => x.id === editGrinderSel.value)
       document.getElementById('edit-clicks-row').style.display = (g && g.micron_per_click) ? 'flex' : 'none'
+    })
+
+    document.getElementById('edit-method').addEventListener('change', () => {
+      if (_editMode !== 'create') return
+      const m = document.getElementById('edit-method').value
+      document.getElementById('edit-technique-row').style.display = m === 'v60' ? 'flex' : 'none'
+      document.getElementById('edit-temp-row').style.display = m === 'filter' ? 'none' : 'flex'
     })
 
     document.querySelectorAll('.edit-slider-row').forEach(row => {
@@ -256,13 +281,72 @@ export const recipesView = {
         `<option value="3-pour">3 пролива</option>` +
         `<option value="1-pour">Один пролив</option>` +
         `<option value="46">4:6 метод</option>` +
-        _customTechniques.map(t => `<option value="custom-${t.id}">${t.name}</option>`).join('')
+        _customTechniques.map(tc => `<option value="custom-${tc.id}">${tc.name}</option>`).join('')
       sel.value = currentTech ?? ''
     }
 
-    function openEditModal(r, cardEl) {
-      _editRecipeId = r.id
-      _editCardEl   = cardEl
+    // ── Steps builder ───────────────────────────────────────────────────────────
+    function _buildStepItem(step = {}) {
+      const div = document.createElement('div')
+      div.className = 'edit-step-item'
+      div.innerHTML = `
+        <div class="edit-step-top">
+          <span class="edit-step-num"></span>
+          <input class="edit-input edit-step-label" type="text" placeholder="Блум, Пролив 1..." value="${(step.label || '').replace(/"/g, '&quot;')}">
+          <input class="edit-input edit-step-dur" type="text" placeholder="0:30" value="${step.duration_sec ? fmt(step.duration_sec) : ''}">
+          <button class="edit-step-del" title="Удалить шаг">×</button>
+        </div>
+        <input class="edit-input edit-step-note" type="text" placeholder="Описание шага (опционально)" value="${(step.note || '').replace(/"/g, '&quot;')}">`
+      div.querySelector('.edit-step-del').addEventListener('click', () => {
+        div.remove()
+        _renumberSteps()
+      })
+      return div
+    }
+
+    function _renumberSteps() {
+      document.querySelectorAll('#edit-steps-list .edit-step-item').forEach((item, i) => {
+        const num = item.querySelector('.edit-step-num')
+        if (num) num.textContent = i + 1
+      })
+    }
+
+    function _collectSteps() {
+      const steps = []
+      document.querySelectorAll('#edit-steps-list .edit-step-item').forEach(item => {
+        const label = item.querySelector('.edit-step-label')?.value.trim()
+        const durStr = item.querySelector('.edit-step-dur')?.value.trim()
+        const note = item.querySelector('.edit-step-note')?.value.trim()
+        const duration_sec = parseFmt(durStr)
+        if (label || duration_sec) steps.push({ label: label || '', duration_sec, note: note || null })
+      })
+      return steps.length > 0 ? steps : null
+    }
+
+    function _loadSteps(steps) {
+      const list = document.getElementById('edit-steps-list')
+      list.innerHTML = ''
+      if (steps && steps.length > 0) {
+        steps.forEach(s => list.appendChild(_buildStepItem(s)))
+        _renumberSteps()
+      }
+    }
+
+    document.getElementById('edit-add-step').addEventListener('click', () => {
+      const list = document.getElementById('edit-steps-list')
+      list.appendChild(_buildStepItem())
+      _renumberSteps()
+      list.lastElementChild.querySelector('.edit-step-label')?.focus()
+    })
+
+    // ── Modal open helpers ──────────────────────────────────────────────────────
+    function openEditModal(r) {
+      _editMode      = 'edit'
+      _editRecipeId  = r.id
+      _editMethod    = r.method
+      document.getElementById('edit-modal-title').textContent = 'Редактировать рецепт'
+      document.getElementById('edit-save-btn').textContent = 'Сохранить изменения'
+      document.getElementById('edit-method-row').style.display = 'none'
       const techRow = document.getElementById('edit-technique-row')
       if (r.method === 'v60') { techRow.style.display = 'flex'; _buildTechniqueSelect(r.technique) }
       else { techRow.style.display = 'none' }
@@ -280,9 +364,37 @@ export const recipesView = {
       document.getElementById('edit-clicks-row').style.display = (r.grinder_id && gHasClicks) ? 'flex' : 'none'
       _editTasteValues = { sweetness: r.taste?.sweetness ?? 0, acidity: r.taste?.acidity ?? 0, bitterness: r.taste?.bitterness ?? 0 }
       _refreshAllPips()
+      _loadSteps(r.steps)
       document.getElementById('edit-modal-overlay').classList.add('visible')
       document.getElementById('edit-save-btn').disabled = false
-      document.getElementById('edit-save-btn').textContent = 'Сохранить изменения'
+    }
+
+    function openCreateModal() {
+      _editMode     = 'create'
+      _editRecipeId = null
+      _editMethod   = 'v60'
+      document.getElementById('edit-modal-title').textContent = 'Новый рецепт'
+      document.getElementById('edit-save-btn').textContent = 'Сохранить рецепт'
+      document.getElementById('edit-method-row').style.display = 'flex'
+      document.getElementById('edit-method').value = 'v60'
+      document.getElementById('edit-technique-row').style.display = 'flex'
+      _buildTechniqueSelect(null)
+      document.getElementById('edit-temp-row').style.display = 'flex'
+      document.getElementById('edit-coffee').value        = ''
+      document.getElementById('edit-water').value         = ''
+      document.getElementById('edit-temp').value          = ''
+      document.getElementById('edit-time').value          = ''
+      document.getElementById('edit-bean').value          = ''
+      document.getElementById('edit-grind-microns').value = ''
+      document.getElementById('edit-grind-clicks').value  = ''
+      document.getElementById('edit-notes').value         = ''
+      editGrinderSel.value = ''
+      document.getElementById('edit-clicks-row').style.display = 'none'
+      _editTasteValues = { sweetness: 0, acidity: 0, bitterness: 0 }
+      _refreshAllPips()
+      _loadSteps(null)
+      document.getElementById('edit-modal-overlay').classList.add('visible')
+      document.getElementById('edit-save-btn').disabled = false
     }
 
     document.getElementById('edit-close').addEventListener('click', () =>
@@ -293,14 +405,18 @@ export const recipesView = {
         document.getElementById('edit-modal-overlay').classList.remove('visible')
     })
 
+    document.getElementById('create-recipe-btn').addEventListener('click', openCreateModal)
+
+    // ── Save handler ────────────────────────────────────────────────────────────
     document.getElementById('edit-save-btn').addEventListener('click', async () => {
-      if (!_editRecipeId) return
       const btn = document.getElementById('edit-save-btn')
       btn.disabled = true; btn.textContent = 'Сохранение...'
       const grinderVal  = editGrinderSel.value
       const grinderName = GRINDERS.find(g => g.id === grinderVal)?.name ?? null
       const selectedTech = document.getElementById('edit-technique')?.value || null
-      const customTechObj = _customTechniques.find(t => `custom-${t.id}` === selectedTech)
+      const customTechObj = _customTechniques.find(tc => `custom-${tc.id}` === selectedTech)
+      const method = _editMode === 'create' ? document.getElementById('edit-method').value : _editMethod
+
       const updated = {
         coffee_g: parseFloat(document.getElementById('edit-coffee').value) || 0,
         water_g:  parseFloat(document.getElementById('edit-water').value)  || 0,
@@ -314,16 +430,28 @@ export const recipesView = {
         notes: document.getElementById('edit-notes').value.trim() || null,
         technique: selectedTech || null,
         customTechniqueSteps: customTechObj ? (customTechObj.steps || customTechObj.description || '') : null,
+        steps: _collectSteps(),
       }
       updated.ratio = updated.coffee_g ? +(updated.water_g / updated.coffee_g).toFixed(2) : 0
+
       try {
-        await updateMyRecipe(_editRecipeId, updated)
-        const existingCard = document.querySelector(`.recipe-card[data-id="${_editRecipeId}"]`)
-        if (existingCard) existingCard.replaceWith(renderCard({ id: _editRecipeId, createdAt: null, ...updated }))
+        if (_editMode === 'create') {
+          const ref = await saveMyRecipe({ ...updated, method })
+          const newRecipe = { id: ref.id, method, createdAt: new Date(), ...updated }
+          const listEl = document.getElementById('recipes-list')
+          listEl.prepend(renderCard(newRecipe))
+          document.getElementById('empty-state').classList.add('hidden')
+          _updateCount()
+        } else {
+          await updateMyRecipe(_editRecipeId, updated)
+          const existingCard = document.querySelector(`.recipe-card[data-id="${_editRecipeId}"]`)
+          if (existingCard) existingCard.replaceWith(renderCard({ id: _editRecipeId, method, createdAt: null, ...updated }))
+        }
         document.getElementById('edit-modal-overlay').classList.remove('visible')
       } catch (e) {
         alert(`Ошибка: ${e.message}`)
-        btn.disabled = false; btn.textContent = 'Сохранить изменения'
+        btn.disabled = false
+        btn.textContent = _editMode === 'create' ? 'Сохранить рецепт' : 'Сохранить изменения'
       }
     })
 
@@ -354,6 +482,26 @@ export const recipesView = {
       const techName = r.technique
         ? (TECH_NAMES[r.technique] || r.technique.replace('custom-', '').slice(0, 20) || r.technique) : null
 
+      const hasSteps = r.steps && r.steps.length > 0
+      const stepsHtml = hasSteps ? `
+        <div class="recipe-steps">
+          <div class="recipe-steps-toggle" data-open="false">
+            <span>Шаги <span class="recipe-steps-count">(${r.steps.length})</span></span>
+            <span class="recipe-steps-arrow">▶</span>
+          </div>
+          <div class="recipe-steps-body hidden">
+            ${r.steps.map((s, i) => `
+              <div class="recipe-step">
+                <span class="recipe-step-num">${i + 1}</span>
+                <div class="recipe-step-content">
+                  <span class="recipe-step-label">${s.label}</span>
+                  ${s.duration_sec ? `<span class="recipe-step-dur">${fmt(s.duration_sec)}</span>` : ''}
+                  ${s.note ? `<div class="recipe-step-note">${s.note}</div>` : ''}
+                </div>
+              </div>`).join('')}
+          </div>
+        </div>` : ''
+
       const card = document.createElement('div')
       card.className = 'recipe-card'
       card.dataset.id = r.id
@@ -367,12 +515,25 @@ export const recipesView = {
         ${r.bean      ? `<div class="recipe-bean">☕ ${r.bean}</div>` : ''}
         ${grinderLine ? `<div class="recipe-grinder">⚙ ${grinderLine}</div>` : ''}
         ${tasteHtml}
+        ${stepsHtml}
         ${r.notes     ? `<div class="recipe-notes">${r.notes}</div>` : ''}
         <div class="recipe-card-footer">
           <button class="btn-delete" data-id="${r.id}">${t('myrecipes.delete')}</button>
           <button class="btn-edit">Изменить</button>
           <button class="btn-load">${t('myrecipes.load')}</button>
         </div>`
+
+      if (hasSteps) {
+        const toggle = card.querySelector('.recipe-steps-toggle')
+        const body   = card.querySelector('.recipe-steps-body')
+        const arrow  = card.querySelector('.recipe-steps-arrow')
+        toggle.addEventListener('click', () => {
+          const isOpen = toggle.dataset.open === 'true'
+          toggle.dataset.open = String(!isOpen)
+          body.classList.toggle('hidden', isOpen)
+          arrow.textContent = isOpen ? '▶' : '▼'
+        })
+      }
 
       card.querySelector('.btn-load').addEventListener('click', () => {
         sessionStorage.setItem('externalRecipe', JSON.stringify({
@@ -382,7 +543,7 @@ export const recipesView = {
         }))
         location.hash = '#calculator'
       })
-      card.querySelector('.btn-edit').addEventListener('click', () => openEditModal(r, card))
+      card.querySelector('.btn-edit').addEventListener('click', () => openEditModal(r))
       card.querySelector('.btn-delete').addEventListener('click', async (e) => {
         const id = e.currentTarget.dataset.id
         if (!confirm(t('myrecipes.confirm.delete'))) return
@@ -423,7 +584,7 @@ export const recipesView = {
           if (!confirm(`Удалить технику «${tech.name}»?`)) return
           try {
             await deleteCustomTechnique(tech.id)
-            _customTechniques = _customTechniques.filter(t => t.id !== tech.id)
+            _customTechniques = _customTechniques.filter(tc => tc.id !== tech.id)
             renderTechList(_customTechniques)
           } catch (e) { alert(`Ошибка: ${e.message}`) }
         })
@@ -468,6 +629,7 @@ export const recipesView = {
         document.querySelector('#auth-prompt .guest-signin-btn').addEventListener('click', showAuthOverlay)
         return
       }
+      document.getElementById('recipes-toolbar').classList.remove('hidden')
       document.getElementById('techniques-mgmt').classList.remove('hidden')
       try {
         const [recipes, techniques] = await Promise.all([loadMyRecipes(), loadCustomTechniques()])

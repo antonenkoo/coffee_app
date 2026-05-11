@@ -1138,6 +1138,22 @@ main {
 }
 .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
 
+.btn-ghost-prominent {
+  width: 100%;
+  padding: 14px;
+  background: transparent;
+  border: 1px solid rgba(232, 213, 176, 0.25);
+  border-radius: var(--radius-s);
+  color: var(--text-muted);
+  font-size: 1rem;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  margin-top: 8px;
+  letter-spacing: 0.01em;
+}
+.btn-ghost-prominent:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+
 /* ─── Recipe Card (Feed + My Recipes) ───────────────────────────────────── */
 .recipe-card {
   background: var(--surface);
@@ -1584,6 +1600,170 @@ textarea.edit-input { resize: vertical; min-height: 72px; line-height: 1.5; text
   color: var(--accent);
   margin-top: 2px;
   opacity: 0.85;
+}
+
+/* ─── Create recipe button (recipes toolbar) ─────────────────────────────── */
+#recipes-toolbar {
+  padding: 0 0 4px;
+}
+.create-recipe-btn {
+  width: 100%;
+  padding: 12px;
+  background: transparent;
+  border: 1px dashed rgba(232, 213, 176, 0.3);
+  border-radius: var(--radius-s);
+  color: var(--accent);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s, border-color 0.15s;
+  letter-spacing: 0.01em;
+}
+.create-recipe-btn:hover { background: var(--accent-dim); border-color: var(--accent); }
+
+/* ─── Edit modal: section hint ───────────────────────────────────────────── */
+.edit-section-hint {
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  margin-left: 4px;
+}
+
+/* ─── Edit modal: steps builder ──────────────────────────────────────────── */
+.edit-step-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.edit-step-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.edit-step-num {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--surface-3);
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.edit-step-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left !important;
+  width: auto !important;
+}
+.edit-step-dur {
+  width: 60px !important;
+  flex-shrink: 0;
+  text-align: center !important;
+}
+.edit-step-del {
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0;
+  transition: color 0.15s, border-color 0.15s;
+}
+.edit-step-del:hover { color: var(--warning); border-color: var(--warning); }
+.edit-step-note {
+  width: 100% !important;
+  text-align: left !important;
+  font-size: 0.8rem !important;
+  padding: 5px 8px !important;
+  color: var(--text-muted) !important;
+}
+.edit-add-step-btn {
+  width: 100%;
+  padding: 9px;
+  margin: 6px 0 2px;
+  background: transparent;
+  border: 1px dashed rgba(255,255,255,0.1);
+  border-radius: var(--radius-s);
+  color: var(--text-dim);
+  font-size: 0.825rem;
+  cursor: pointer;
+  font-family: inherit;
+  transition: color 0.15s, border-color 0.15s;
+}
+.edit-add-step-btn:hover { color: var(--accent); border-color: rgba(232,213,176,0.3); }
+
+/* ─── Recipe card: steps display ─────────────────────────────────────────── */
+.recipe-steps {
+  margin-top: 2px;
+}
+.recipe-steps-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.775rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px 0;
+  user-select: none;
+  transition: color 0.15s;
+}
+.recipe-steps-toggle:hover { color: var(--accent); }
+.recipe-steps-count { color: var(--text-dim); }
+.recipe-steps-arrow { font-size: 0.55rem; transition: transform 0.15s; }
+.recipe-steps-body { margin-top: 6px; display: flex; flex-direction: column; gap: 0; }
+.recipe-steps-body.hidden { display: none; }
+.recipe-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 7px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.recipe-step:last-child { border-bottom: none; }
+.recipe-step-num {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--surface-3);
+  color: var(--text-muted);
+  font-size: 0.65rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.recipe-step-content { flex: 1; min-width: 0; }
+.recipe-step-label { font-size: 0.825rem; color: var(--text); font-weight: 500; }
+.recipe-step-dur {
+  font-size: 0.75rem;
+  color: var(--accent);
+  margin-left: 8px;
+  opacity: 0.85;
+  font-variant-numeric: tabular-nums;
+}
+.recipe-step-note {
+  font-size: 0.775rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+  line-height: 1.4;
 }
 
 /* ─── Profile page ───────────────────────────────────────────────────────── */

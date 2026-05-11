@@ -78,7 +78,7 @@ export const profileView = {
         </div>
         <div class="settings-row">
           <span class="settings-label" data-i18n="profile.version">Версия</span>
-          <a href="changelog.html" class="settings-value settings-value--accent" style="text-decoration:none;">v2.3</a>
+          <a href="changelog.html" class="settings-value settings-value--accent" style="text-decoration:none;">v2.4</a>
         </div>
       </div>
 
