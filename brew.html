@@ -794,9 +794,15 @@ scaleBtn.addEventListener('click', () => {
 })
 
 // ── Voice test button ────────────────────────────────────────────────────────
-document.getElementById('voice-test-btn').addEventListener('click', () => {
+document.getElementById('voice-test-btn').addEventListener('click', async () => {
   if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)()
+  if (_audioCtx.state === 'suspended') await _audioCtx.resume()
+  // reload ja voices on demand — they may not be ready on first render
+  if (document.getElementById('alert-mode').value === 'ja' && jaVoices.length === 0) loadJaVoices()
+  const btn = document.getElementById('voice-test-btn')
+  btn.textContent = '♪'
   playAlert()
+  setTimeout(() => { btn.textContent = '▶' }, 1000)
 })
 
 // ── Restore alert mode from localStorage ────────────────────────────────────
