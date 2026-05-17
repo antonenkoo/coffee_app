@@ -446,7 +446,10 @@ const {
   method, coffee_g, water_g, temp_c, brew_time_sec,
   actual_brew_time_sec, grind_manual_microns,
   pour_technique, customTechniqueSteps,
+  scale_final_weight, scale_avg_flow,
 } = brewData
+
+const isSimpleMode = brewData.mode === 'simple'
 
 const TECHNIQUE_NAMES = {
   '3-pour': '3 пролива',
@@ -467,31 +470,38 @@ function parseFmt(str) {
   return (parseInt(parts[0]) || 0) * 60 + (parseInt(parts[1]) || 0)
 }
 
-const METHOD_NAMES = { v60: 'V60', aeropress: 'AeroPress', filter: 'Filter (Bravilor ISO)' }
+const METHOD_NAMES = { v60: 'V60', aeropress: 'AeroPress', filter: 'Filter (Bravilor ISO)', simple: 'Простой режим' }
 
 // ── Pre-fill form ─────────────────────────────────────────────────────────────
-document.getElementById('f-coffee').value = coffee_g
-document.getElementById('f-water').value  = water_g
-document.getElementById('f-time').value   = fmt(actual_brew_time_sec ?? brew_time_sec)
+document.getElementById('f-time').value = fmt(actual_brew_time_sec ?? brew_time_sec)
 document.getElementById('f-method-display').textContent = METHOD_NAMES[method] ?? method
 
-// Temperature: hide for filter (machine-controlled)
-if (method === 'filter') {
-  document.getElementById('f-temp-row').style.display = 'none'
+if (isSimpleMode) {
+  // In simple mode hide all recipe-specific fields
+  ;['f-coffee', 'f-water', 'f-temp-row', 'f-technique-row', 'f-method-row'].forEach(id => {
+    const el = document.getElementById(id)
+    if (el) el.closest('.form-row, [class*="form-row"]')
+      ? (el.closest('.form-row') || el.parentElement).style.display = 'none'
+      : el.style.display = 'none'
+  })
+  const heading = document.querySelector('h1, header h1, .page-title')
+  if (heading) heading.textContent = 'Записать сессию'
 } else {
-  document.getElementById('f-temp').value = temp_c
-}
-
-// Pre-fill grind microns if filter method
-if (grind_manual_microns) {
-  document.getElementById('f-grind-microns').value = grind_manual_microns
-}
-
-// Show technique row for V60 if technique was selected
-if (method === 'v60' && pour_technique) {
-  document.getElementById('f-technique-row').style.display = 'flex'
-  const techName = TECHNIQUE_NAMES[pour_technique] || pour_technique
-  document.getElementById('f-technique-display').textContent = techName
+  document.getElementById('f-coffee').value = coffee_g
+  document.getElementById('f-water').value  = water_g
+  if (method === 'filter') {
+    document.getElementById('f-temp-row').style.display = 'none'
+  } else {
+    document.getElementById('f-temp').value = temp_c
+  }
+  if (grind_manual_microns) {
+    document.getElementById('f-grind-microns').value = grind_manual_microns
+  }
+  if (method === 'v60' && pour_technique) {
+    document.getElementById('f-technique-row').style.display = 'flex'
+    const techName = TECHNIQUE_NAMES[pour_technique] || pour_technique
+    document.getElementById('f-technique-display').textContent = techName
+  }
 }
 
 // ── Grinder select ────────────────────────────────────────────────────────────
@@ -553,9 +563,9 @@ document.getElementById('save-recipe-btn').addEventListener('click', async () =>
 
   _savedRecipeData = {
     method,
-    coffee_g:    parseFloat(document.getElementById('f-coffee').value) || coffee_g,
-    water_g:     parseFloat(document.getElementById('f-water').value)  || water_g,
-    temp_c:      method === 'filter' ? 93 : (parseFloat(document.getElementById('f-temp').value) || temp_c),
+    coffee_g:    isSimpleMode ? null : (parseFloat(document.getElementById('f-coffee').value) || coffee_g),
+    water_g:     isSimpleMode ? null : (parseFloat(document.getElementById('f-water').value)  || water_g),
+    temp_c:      isSimpleMode ? null : (method === 'filter' ? 93 : (parseFloat(document.getElementById('f-temp').value) || temp_c)),
     brew_time_sec: parseFmt(document.getElementById('f-time').value) || brew_time_sec,
     bean:        document.getElementById('f-bean').value.trim() || null,
     grinder_id:  grinderVal || null,
@@ -566,6 +576,8 @@ document.getElementById('save-recipe-btn').addEventListener('click', async () =>
     notes: document.getElementById('f-notes').value.trim() || null,
     technique: pour_technique || null,
     customTechniqueSteps: customTechniqueSteps || null,
+    scale_final_weight: scale_final_weight ?? null,
+    scale_avg_flow:     scale_avg_flow     ?? null,
   }
 
   const btn = document.getElementById('save-recipe-btn')

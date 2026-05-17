@@ -9,48 +9,17 @@ let _authUnsubscribe = null
 // ── Sound preview (used by profile page) ────────────────────────────────────
 let _profileAudioCtx = null
 
-const ANIME_PHRASES = [
-  'もうすぐ注ぐ時間ですよ',
-  'お湯の準備をしてね',
-  'そろそろですよ、頑張って',
-  'あと少しで注ぐ時間です',
-  '準備してください、もうすぐです',
-]
-
-const NEUTRAL_PHRASES = [
-  '注ぐ時間です',
-  '次のステップです',
-  '準備してください',
-]
-
 async function _previewSound(mode) {
   if (mode === 'off') return
   try {
     if (!_profileAudioCtx) _profileAudioCtx = new (window.AudioContext || window.webkitAudioContext)()
     if (_profileAudioCtx.state === 'suspended') await _profileAudioCtx.resume()
   } catch (_) {}
-
   const ctx = _profileAudioCtx
-
-  if (mode === 'beep') {
-    _tone(ctx, 660, 0.12, 0); _tone(ctx, 880, 0.20, 0.18)
-  } else if (mode === 'bell') {
-    _tone(ctx, 1047, 0.6, 0, 'sine'); _tone(ctx, 1319, 0.3, 0.02, 'sine')
-  } else if (mode === 'gong') {
-    _tone(ctx, 220, 1.4, 0, 'sine'); _tone(ctx, 110, 0.8, 0.05, 'sine')
-  } else if (mode === 'chime') {
-    _tone(ctx, 1568, 0.5, 0, 'sine'); _tone(ctx, 1976, 0.4, 0.12, 'sine'); _tone(ctx, 2093, 0.3, 0.25, 'sine')
-  } else if (mode === 'ja-anime' || mode === 'ja-neutral') {
-    const phrases = mode === 'ja-anime' ? ANIME_PHRASES : NEUTRAL_PHRASES
-    const phrase  = phrases[Math.floor(Math.random() * phrases.length)]
-    const utter   = new SpeechSynthesisUtterance(phrase)
-    utter.lang    = 'ja-JP'
-    if (mode === 'ja-anime') { utter.pitch = 1.6; utter.rate = 1.15 }
-    else                     { utter.pitch = 1.0; utter.rate = 1.0  }
-    const voices = speechSynthesis.getVoices().filter(v => v.lang.startsWith('ja'))
-    if (voices.length) utter.voice = voices[0]
-    speechSynthesis.speak(utter)
-  }
+  if (mode === 'beep')       { _tone(ctx, 660, 0.12, 0); _tone(ctx, 880, 0.20, 0.18) }
+  else if (mode === 'bell')  { _tone(ctx, 1047, 0.6, 0, 'sine'); _tone(ctx, 1319, 0.3, 0.02, 'sine') }
+  else if (mode === 'gong')  { _tone(ctx, 220, 1.4, 0, 'sine'); _tone(ctx, 110, 0.8, 0.05, 'sine') }
+  else if (mode === 'chime') { _tone(ctx, 1568, 0.5, 0, 'sine'); _tone(ctx, 1976, 0.4, 0.12, 'sine'); _tone(ctx, 2093, 0.3, 0.25, 'sine') }
 }
 
 function _tone(ctx, freq, dur, delayStart = 0, type = 'sine') {
@@ -140,26 +109,18 @@ export const profileView = {
           <span class="settings-label">Звук будильника</span>
           <div class="sound-pref-controls">
             <select id="pref-alert-mode" class="settings-select">
-              <optgroup label="Голоса">
-                <option value="ja-anime">Аниме-девушка ✦</option>
-                <option value="ja-neutral">Японский нейтральный</option>
-              </optgroup>
-              <optgroup label="Звуки">
-                <option value="beep">Бип</option>
-                <option value="bell">Колокольчик</option>
-                <option value="gong">Гонг</option>
-                <option value="chime">Чайм</option>
-              </optgroup>
-              <optgroup label="">
-                <option value="off">Выкл</option>
-              </optgroup>
+              <option value="beep">Бип</option>
+              <option value="bell">Колокольчик</option>
+              <option value="gong">Гонг</option>
+              <option value="chime">Чайм</option>
+              <option value="off">Выкл</option>
             </select>
             <button id="pref-alert-preview" class="preview-sound-btn" title="Проверить звук">▶</button>
           </div>
         </div>
         <div class="settings-row">
           <span class="settings-label" data-i18n="profile.version">Версия</span>
-          <a href="changelog.html" class="settings-value settings-value--accent" style="text-decoration:none;">v2.8</a>
+          <a href="changelog.html" class="settings-value settings-value--accent" style="text-decoration:none;">v3.0</a>
         </div>
       </div>
 
@@ -226,8 +187,10 @@ export const profileView = {
         const alertSel     = document.getElementById('pref-alert-mode')
         const previewBtn   = document.getElementById('pref-alert-preview')
         if (alertSel) {
-          const saved = localStorage.getItem('coffee_alert_mode') || 'beep'
-          alertSel.value = saved
+          const raw      = localStorage.getItem('coffee_alert_mode') || 'beep'
+          const migrated = raw.startsWith('ja-') ? 'beep' : raw
+          if (migrated !== raw) localStorage.setItem('coffee_alert_mode', migrated)
+          alertSel.value = migrated
           alertSel.addEventListener('change', () => {
             localStorage.setItem('coffee_alert_mode', alertSel.value)
             updateUserProfile({ pref_alert_mode: alertSel.value }).catch(() => {})

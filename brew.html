@@ -56,15 +56,11 @@
     }
     #stop-btn:hover { border-color: var(--text); color: var(--text); }
 
-    /* ── Top-right cluster (method + scale) ─── */
+    /* ── Top-right method badge ─── */
     #top-right {
       position: absolute;
-      top: 16px;
+      top: 18px;
       right: 20px;
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      gap: 6px;
     }
     #brew-method-badge {
       font-size: 0.7rem;
@@ -75,67 +71,217 @@
 
     /* ── Scale connect button ────────────── */
     #scale-btn {
-      display: flex;
+      display: inline-flex;
       align-items: center;
-      gap: 5px;
-      padding: 4px 10px;
+      gap: 7px;
+      padding: 10px 26px;
       background: transparent;
-      border: 1px solid var(--border);
-      border-radius: 20px;
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 24px;
       color: var(--muted);
-      font-size: 0.7rem;
+      font-size: 0.85rem;
+      font-family: inherit;
       cursor: pointer;
       transition: border-color 0.15s, color 0.15s, background 0.15s;
       white-space: nowrap;
       user-select: none;
     }
-    #scale-btn:hover { border-color: var(--accent); color: var(--accent); }
+    #scale-btn:hover { border-color: rgba(255,255,255,0.3); color: var(--text); }
     #scale-btn.connecting { color: var(--muted); animation: scale-pulse 1s ease-in-out infinite; }
-    #scale-btn.connected  { border-color: rgba(232,213,176,0.4); color: var(--accent); }
+    #scale-btn.connected  { border-color: rgba(232,213,176,0.5); color: var(--accent); background: rgba(232,213,176,0.06); }
     #scale-btn.unsupported { opacity: 0.3; cursor: not-allowed; pointer-events: none; }
     #scale-dot {
       width: 6px; height: 6px;
       border-radius: 50%;
       background: currentColor;
       display: none;
+      flex-shrink: 0;
     }
     #scale-btn.connected #scale-dot { display: block; }
+
+    /* ── Scale widget picker (shown after connect) ── */
+    #scale-widgets {
+      display: none;
+      flex-direction: column;
+      gap: 6px;
+      width: 100%;
+      padding: 12px 16px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 0.82rem;
+    }
+    #scale-widgets.visible { display: flex; }
+    .widget-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--text-muted, var(--muted));
+      cursor: pointer;
+      user-select: none;
+    }
+    .widget-row input[type=checkbox] { accent-color: var(--accent); width: 15px; height: 15px; cursor: pointer; }
+    .widget-row span { flex: 1; }
 
     @keyframes scale-pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
     /* ── Live weight + flow in brew phase ── */
     #scale-live {
       display: flex;
-      gap: 24px;
+      gap: 36px;
       justify-content: center;
-      padding: 0 0 20px;
+      padding: 0 0 12px;
     }
     .scale-stat {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 2px;
+      gap: 4px;
     }
     .scale-stat-label {
-      font-size: 0.55rem;
+      font-size: 0.68rem;
       text-transform: uppercase;
       letter-spacing: 0.12em;
-      color: var(--dim);
+      color: var(--muted);
     }
     .scale-stat-row {
       display: flex;
       align-items: baseline;
-      gap: 3px;
+      gap: 4px;
     }
     .scale-stat-val {
-      font-size: 2.4rem;
+      font-size: 3.4rem;
       font-weight: 700;
       color: var(--accent);
       font-variant-numeric: tabular-nums;
       line-height: 1;
     }
     .scale-stat-unit {
+      font-size: 1.1rem;
+      color: var(--muted);
+    }
+
+    /* ── Weight graph (brew + done phases) ── */
+    .brew-graph {
+      width: 100%;
+      max-width: 320px;
+      height: 90px;
+      opacity: 0.85;
+      border-radius: 8px;
+    }
+
+    /* ── Brew grid ─────────────────────────── */
+    #brew-grid { width: 100%; display: flex; flex-direction: column; gap: 0; }
+
+    /* Mobile: only timer shown by default; scale blocks appear when connected */
+    .brew-block         { display: none; }
+    #block-timer        { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    .brew-block-label   { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); }
+
+    .brew-block-val { display: flex; align-items: baseline; gap: 4px; }
+    .brew-block-val > span:first-child {
+      font-size: 3.2rem; font-weight: 700; color: var(--accent);
+      font-variant-numeric: tabular-nums; line-height: 1;
+    }
+    .brew-block-unit { font-size: 1rem; color: var(--muted); }
+
+    /* Finish brew button */
+    #finish-btn {
+      margin-top: 12px;
+      padding: 12px 36px;
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 28px;
+      color: var(--muted);
       font-size: 0.9rem;
+      font-family: inherit;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    #finish-btn:hover { border-color: rgba(255,255,255,0.35); color: var(--text); }
+
+    /* ── Desktop brew layout (≥900px) ──────────────────── */
+    @media (min-width: 900px) {
+      #brew-app { padding: 40px 48px; align-items: stretch; }
+      #phase-brew { max-width: 900px; width: 100%; gap: 14px; align-items: stretch; }
+
+      /* 3-row grid: [timer weight] [graph] [flow fact] */
+      #brew-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        grid-template-areas:
+          "timer  weight"
+          "graph  graph"
+          "flow   fact";
+        gap: 14px;
+      }
+
+      #block-timer  { grid-area: timer;  }
+      #block-weight { grid-area: weight; }
+      #block-graph  { grid-area: graph;  }
+      #block-flow   { grid-area: flow;   }
+      #block-fact   { grid-area: fact;   }
+
+      /* All blocks visible as cards on desktop */
+      .brew-block {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        padding: 28px 20px;
+        background: rgba(255,255,255,0.03);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        text-align: center;
+      }
+
+      /* Scale blocks dim until connected */
+      .brew-block--scale { opacity: 0.3; transition: opacity 0.3s; }
+      .brew-block--scale.active { opacity: 1; }
+
+      /* Graph full row */
+      .brew-block--wide .brew-graph { width: 100%; max-width: 100%; height: 110px; }
+
+      /* Large values */
+      #block-timer #brew-timer   { font-size: 5rem; padding: 0; }
+      .brew-block-val > span:first-child { font-size: 4rem; }
+      .brew-block-unit { font-size: 1.2rem; }
+
+      /* Fact text */
+      #brew-fact-text { font-size: 0.82rem; color: var(--muted); line-height: 1.6; max-width: 220px; }
+
+      #scale-live { display: none !important; }
+      #progress-wrap { left: 260px; }
+    }
+
+    /* ── Done scale summary ── */
+    #done-scale-stats {
+      display: flex;
+      gap: 32px;
+      justify-content: center;
+      padding: 8px 0 4px;
+    }
+    .done-scale-stat {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+    .done-scale-stat-label {
+      font-size: 0.62rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+    }
+    .done-scale-stat-val {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: var(--accent);
+      font-variant-numeric: tabular-nums;
+    }
+    .done-scale-stat-unit {
+      font-size: 0.8rem;
       color: var(--muted);
     }
 
@@ -395,10 +541,6 @@
   <button id="stop-btn" title="Остановить">✕</button>
   <div id="top-right">
     <div id="brew-method-badge"></div>
-    <button id="scale-btn" title="Подключить весы">
-      <span id="scale-dot"></span>
-      <span id="scale-btn-text">⚖ Весы</span>
-    </button>
   </div>
 
   <!-- ── START PHASE ─────────────────────────── -->
@@ -411,24 +553,33 @@
     <div id="voice-row">
       <span>🔔</span>
       <select id="alert-mode">
-        <optgroup label="Голоса">
-          <option value="ja-anime">Аниме-девушка ✦</option>
-          <option value="ja-neutral">Японский нейтральный</option>
-        </optgroup>
-        <optgroup label="Звуки">
-          <option value="beep" selected>Бип</option>
-          <option value="bell">Колокольчик</option>
-          <option value="gong">Гонг</option>
-          <option value="chime">Чайм</option>
-        </optgroup>
-        <optgroup label="">
-          <option value="off">Без звука</option>
-        </optgroup>
+        <option value="beep" selected>Бип</option>
+        <option value="bell">Колокольчик</option>
+        <option value="gong">Гонг</option>
+        <option value="chime">Чайм</option>
+        <option value="off">Без звука</option>
       </select>
-      <select id="ja-voice" style="display:none"></select>
       <button id="voice-test-btn" title="Проверить звук" style="flex-shrink:0;padding:4px 8px;background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--muted);font-size:0.8rem;cursor:pointer;">▶</button>
     </div>
     <button id="start-btn" data-i18n="brew.start.btn">▶&nbsp;&nbsp;Начать заваривание</button>
+    <button id="scale-btn" title="Подключить весы">
+      <span id="scale-dot"></span>
+      <span id="scale-btn-text">⚖&nbsp;&nbsp;Подключить весы</span>
+    </button>
+    <div id="scale-widgets">
+      <label class="widget-row">
+        <input type="checkbox" id="w-weight" checked>
+        <span>⚖ Вес (г)</span>
+      </label>
+      <label class="widget-row">
+        <input type="checkbox" id="w-flow" checked>
+        <span>💧 Скорость потока (г/с)</span>
+      </label>
+      <label class="widget-row">
+        <input type="checkbox" id="w-graph">
+        <span>📈 График веса</span>
+      </label>
+    </div>
   </div>
 
   <!-- ── COUNTDOWN PHASE ─────────────────────── -->
@@ -439,21 +590,28 @@
   <!-- ── BREW PHASE ──────────────────────────── -->
   <div id="phase-brew" class="phase hidden">
     <div id="progress-wrap"><div id="progress-fill"></div></div>
-    <div id="brew-timer">00:00</div>
-    <div id="scale-live" class="hidden">
-      <div class="scale-stat">
-        <span class="scale-stat-label">Вес</span>
-        <div class="scale-stat-row">
-          <span id="scale-live-g" class="scale-stat-val">—</span>
-          <span class="scale-stat-unit">г</span>
-        </div>
+
+    <!-- 4-block grid: Timer+Weight / Graph / Flow+Fact -->
+    <div id="brew-grid">
+      <div class="brew-block" id="block-timer">
+        <div class="brew-block-label">Время</div>
+        <div id="brew-timer">00:00</div>
       </div>
-      <div class="scale-stat">
-        <span class="scale-stat-label">Поток</span>
-        <div class="scale-stat-row">
-          <span id="scale-live-flow" class="scale-stat-val">—</span>
-          <span class="scale-stat-unit">г/с</span>
-        </div>
+      <div class="brew-block brew-block--scale" id="block-weight">
+        <div class="brew-block-label">Вес</div>
+        <div class="brew-block-val"><span id="scale-live-g">—</span><span class="brew-block-unit">г</span></div>
+      </div>
+      <div class="brew-block brew-block--wide" id="block-graph">
+        <div class="brew-block-label">График веса</div>
+        <canvas id="weight-graph" class="brew-graph" width="640" height="100"></canvas>
+      </div>
+      <div class="brew-block brew-block--scale" id="block-flow">
+        <div class="brew-block-label">Поток</div>
+        <div class="brew-block-val"><span id="scale-live-flow">—</span><span class="brew-block-unit">г/с</span></div>
+      </div>
+      <div class="brew-block" id="block-fact">
+        <div class="brew-block-label">Знаете ли вы</div>
+        <div id="brew-fact-text"></div>
       </div>
     </div>
     <div id="current-step-wrap">
@@ -466,6 +624,7 @@
       <div id="next-action"></div>
       <div id="next-in"></div>
     </div>
+    <button id="finish-btn">■&nbsp;&nbsp;Завершить</button>
   </div>
 
   <!-- ── DONE PHASE ──────────────────────────── -->
@@ -473,6 +632,23 @@
     <div id="done-emoji">☕</div>
     <div id="done-title" data-i18n="brew.done.title">Готово!</div>
     <div id="done-time"></div>
+    <canvas id="done-graph" class="brew-graph" width="320" height="90" style="display:none;"></canvas>
+    <div id="done-scale-stats" style="display:none;">
+      <div class="done-scale-stat">
+        <span class="done-scale-stat-label">Итог вес</span>
+        <div style="display:flex;align-items:baseline;gap:3px;">
+          <span class="done-scale-stat-val" id="done-final-weight">—</span>
+          <span class="done-scale-stat-unit">г</span>
+        </div>
+      </div>
+      <div class="done-scale-stat">
+        <span class="done-scale-stat-label">Средний поток</span>
+        <div style="display:flex;align-items:baseline;gap:3px;">
+          <span class="done-scale-stat-val" id="done-avg-flow">—</span>
+          <span class="done-scale-stat-unit">г/с</span>
+        </div>
+      </div>
+    </div>
     <div class="done-actions">
       <button id="save-btn" data-i18n="brew.save.btn">Записать рецепт</button>
       <button id="back-btn" data-i18n="brew.back.btn">Завершить без записи</button>
@@ -625,6 +801,22 @@ function startBrew() {
   showPhase('phase-brew')
   elapsed    = 0
   currentIdx = 0
+
+  _graphPts.length = 0
+  document.getElementById('brew-fact-text').textContent =
+    _FACTS[Math.floor(Math.random() * _FACTS.length)]
+
+  if (isSimpleMode) {
+    document.getElementById('current-step-wrap').style.display = 'none'
+    document.getElementById('next-step-wrap').style.display    = 'none'
+    document.getElementById('progress-wrap').style.display     = 'none'
+    brewInterval = setInterval(() => {
+      elapsed++
+      document.getElementById('brew-timer').textContent = fmt(elapsed)
+    }, 1000)
+    return
+  }
+
   updateStepUI(0)
 
   brewInterval = setInterval(() => {
@@ -670,16 +862,37 @@ function showDone(totalSec) {
   showPhase('phase-done')
   document.getElementById('done-time').textContent =
     t('brew.time.label') + fmt(totalSec)
-  if (isSimpleMode) {
-    document.getElementById('save-btn').style.display = 'none'
-  } else {
-    // Save actual brew time back to sessionStorage for save-recipe page
-    try {
-      const stored = JSON.parse(sessionStorage.getItem('brewState') || '{}')
-      stored.actual_brew_time_sec = totalSec
-      sessionStorage.setItem('brewState', JSON.stringify(stored))
-    } catch(_) {}
+
+  // Scale summary on done screen
+  if (_graphPts.length >= 2) {
+    const doneGraph = document.getElementById('done-graph')
+    doneGraph.style.display = 'block'
+    _drawGraphOn(doneGraph)
+
+    const statsEl = document.getElementById('done-scale-stats')
+    statsEl.style.display = 'flex'
+    const firstW = _graphPts[0].w
+    const lastW  = _graphPts[_graphPts.length - 1].w
+    document.getElementById('done-final-weight').textContent = lastW.toFixed(1)
+    const avgFlow = totalSec > 0 ? Math.max(0, (lastW - firstW) / totalSec) : 0
+    document.getElementById('done-avg-flow').textContent = avgFlow.toFixed(2)
   }
+
+  // Always save stats to sessionStorage for save-recipe page
+  try {
+    const stored = JSON.parse(sessionStorage.getItem('brewState') || '{}')
+    stored.actual_brew_time_sec = totalSec
+    if (_graphPts.length >= 2) {
+      stored.scale_final_weight = +_graphPts[_graphPts.length - 1].w.toFixed(1)
+      const firstW = _graphPts[0].w
+      stored.scale_avg_flow = totalSec > 0
+        ? +Math.max(0, (stored.scale_final_weight - firstW) / totalSec).toFixed(3)
+        : 0
+    }
+    sessionStorage.setItem('brewState', JSON.stringify(stored))
+  } catch(_) {}
+  document.getElementById('save-btn').textContent =
+    isSimpleMode ? 'Записать сессию' : 'Записать рецепт'
   // Victory beeps
   playBeep(523, 0.18)
   setTimeout(() => playBeep(659, 0.18), 220)
@@ -697,6 +910,19 @@ document.getElementById('stop-btn').addEventListener('click', () => {
   if (brewInterval) clearInterval(brewInterval)
   const ok = confirm(t('brew.stop.confirm'))
   if (ok) window.location.href = 'index.html'
+  else if (brewInterval !== null) {
+    // resume if cancelled
+    brewInterval = setInterval(() => {
+      elapsed++
+      document.getElementById('brew-timer').textContent = fmt(elapsed)
+      document.getElementById('progress-fill').style.width =
+        `${Math.min(100, (elapsed / brew_time_sec) * 100)}%`
+    }, 1000)
+  }
+})
+
+document.getElementById('finish-btn').addEventListener('click', () => {
+  showDone(elapsed)
 })
 
 document.getElementById('save-btn').addEventListener('click', () => {
@@ -709,42 +935,7 @@ document.getElementById('back-btn').addEventListener('click', () => {
 })
 
 // ── Voice alerts ─────────────────────────────────────────────────────────────
-const ALERT_PHRASES = [
-  'もうすぐ注ぐ時間ですよ',
-  '準備してください',
-  'あと五秒です、準備して',
-  'そろそろお湯を注いで',
-  'もうすぐですよ',
-]
-
-let jaVoices = []
 let voiceAlertSentForStep = -1
-
-function loadJaVoices() {
-  jaVoices = speechSynthesis.getVoices().filter(v => v.lang.startsWith('ja'))
-  const sel = document.getElementById('ja-voice')
-  if (jaVoices.length === 0) return
-  sel.innerHTML = jaVoices.map((v, i) =>
-    `<option value="${i}">${v.name}</option>`
-  ).join('')
-}
-if ('speechSynthesis' in window) {
-  speechSynthesis.addEventListener('voiceschanged', loadJaVoices)
-  loadJaVoices()
-}
-
-document.getElementById('alert-mode').addEventListener('change', function() {
-  const jaVoiceSel = document.getElementById('ja-voice')
-  const isJa = this.value === 'ja-anime' || this.value === 'ja-neutral'
-  jaVoiceSel.style.display = isJa ? '' : 'none'
-  if (isJa) loadJaVoices()
-})
-
-const NEUTRAL_PHRASES = [
-  '注ぐ時間です',
-  '次のステップです',
-  '準備してください',
-]
 
 function _brewTone(freq, dur, delayStart = 0) {
   try {
@@ -762,66 +953,147 @@ function _brewTone(freq, dur, delayStart = 0) {
 function playAlert() {
   const mode = document.getElementById('alert-mode').value
   if (mode === 'off') return
-
-  if (mode === 'beep') {
-    _brewTone(660, 0.12); _brewTone(880, 0.20, 0.18)
-  } else if (mode === 'bell') {
-    _brewTone(1047, 0.6); _brewTone(1319, 0.3, 0.02)
-  } else if (mode === 'gong') {
-    _brewTone(220, 1.4); _brewTone(110, 0.8, 0.05)
-  } else if (mode === 'chime') {
-    _brewTone(1568, 0.5); _brewTone(1976, 0.4, 0.12); _brewTone(2093, 0.3, 0.25)
-  } else if ((mode === 'ja-anime' || mode === 'ja-neutral') && 'speechSynthesis' in window) {
-    const phrases = mode === 'ja-anime' ? ALERT_PHRASES : NEUTRAL_PHRASES
-    const phrase  = phrases[Math.floor(Math.random() * phrases.length)]
-    const utter   = new SpeechSynthesisUtterance(phrase)
-    utter.lang    = 'ja-JP'
-    if (mode === 'ja-anime') { utter.pitch = 1.6; utter.rate = 1.15 }
-    else                     { utter.pitch = 1.0; utter.rate = 1.0  }
-    const idx = parseInt(document.getElementById('ja-voice').value || '0')
-    if (jaVoices[idx]) utter.voice = jaVoices[idx]
-    speechSynthesis.speak(utter)
-  }
+  if (mode === 'beep')       { _brewTone(660, 0.12); _brewTone(880, 0.20, 0.18) }
+  else if (mode === 'bell')  { _brewTone(1047, 0.6); _brewTone(1319, 0.3, 0.02) }
+  else if (mode === 'gong')  { _brewTone(220, 1.4);  _brewTone(110, 0.8, 0.05)  }
+  else if (mode === 'chime') { _brewTone(1568, 0.5); _brewTone(1976, 0.4, 0.12); _brewTone(2093, 0.3, 0.25) }
 }
 
 // ── BLE Scale ────────────────────────────────────────────────────────────────
-const scaleLive    = document.getElementById('scale-live')
-const scaleLiveG   = document.getElementById('scale-live-g')
+const scaleLive     = document.getElementById('scale-live')
+const scaleLiveG    = document.getElementById('scale-live-g')
 const scaleLiveFlow = document.getElementById('scale-live-flow')
-const scaleBtn     = document.getElementById('scale-btn')
-const scaleBtnTx   = document.getElementById('scale-btn-text')
+const scaleBtn      = document.getElementById('scale-btn')
+const scaleBtnTx    = document.getElementById('scale-btn-text')
+const scaleWidgets  = document.getElementById('scale-widgets')
+const weightCanvas  = document.getElementById('weight-graph')
+
+// Widget preference helpers
+function _wPref(id)    { return localStorage.getItem('scale_w_' + id) !== '0' }
+function _wSave(id, v) { localStorage.setItem('scale_w_' + id, v ? '1' : '0') }
+
+// Restore widget checkboxes from prefs
+;['weight','flow','graph'].forEach(id => {
+  const el = document.getElementById('w-' + id)
+  if (el) el.checked = _wPref(id)
+  el?.addEventListener('change', () => _wSave(id, el.checked))
+})
+
+// Apply widget visibility to brew phase elements
+// ── Fun facts ─────────────────────────────────────────────────────────────────
+const _FACTS = [
+  'Кофе открыли в Эфиопии: коза по имени Калди не спала после ягод — её пастух решил попробовать.',
+  'Осьминоги имеют три сердца, голубую кровь и девять мозгов.',
+  'Финляндия пьёт больше кофе на душу населения, чем любая другая страна — около 12 кг в год.',
+  'Слово «espresso» означает «выдавленный» по-итальянски — не «быстрый».',
+  'Мёд никогда не портится: в египетских гробницах нашли 3000-летний мёд, который всё ещё можно есть.',
+  'Кошки не чувствуют сладкий вкус — у них нет соответствующих рецепторов.',
+  'Первые кофейни открылись в Константинополе в 1554 году и стали центрами интеллектуальных дискуссий.',
+  'Морские выдры держатся за лапы во сне, чтобы не унесло течением.',
+  'Зёрна кофе — это косточки плода, похожего на вишню, который называют «кофейной ягодой».',
+  'Воробьи узнают лица людей и запоминают тех, кто их обидел.',
+  'Первый коммерческий рейс произошёл в 1914 году — расстояние 34 км, время в пути 23 минуты.',
+  'Кофе помогает пчёлам: нектар с кофеином улучшает память пчёл о местах хорошего опыления.',
+  'Осьминог может открыть банку с крышкой и решать простые головоломки.',
+  'Медузы на 95% состоят из воды — тем не менее они жили на Земле 650 миллионов лет.',
+  'V60 изобрела Hario в Японии в 2004 году — угол 60° обеспечивает равномерную экстракцию.',
+  'Слоны — единственные животные, которые не умеют прыгать.',
+  'Кофейное дерево живёт до 100 лет, но лучший урожай даёт в возрасте 7–20 лет.',
+  'Белые медведи не белые: их шерсть прозрачная и полая, а кожа чёрная.',
+]
+
+function _applyWidgets() {
+  const showWeight = document.getElementById('w-weight').checked
+  const showFlow   = document.getElementById('w-flow').checked
+  const showGraph  = document.getElementById('w-graph').checked
+  const connected  = scale.state === 'connected'
+
+  // Desktop: blocks are always shown as cards, dim/undim scale-dependent ones
+  document.getElementById('block-weight').classList.toggle('active', connected && showWeight)
+  document.getElementById('block-flow').classList.toggle('active', connected && showFlow)
+  document.getElementById('block-graph').classList.toggle('active', connected && showGraph)
+  weightCanvas.style.display = (connected && showGraph) ? 'block' : 'none'
+
+  // Mobile: show scale-live if scale connected and any stat enabled
+  if (scaleLive) scaleLive.classList.toggle('hidden', !connected || (!showWeight && !showFlow))
+}
+
+// Cumulative weight graph (all points from brew start, never shifted)
+const _graphPts = []  // { w, t } — weight + elapsed seconds
+
+function _drawGraphOn(canvas) {
+  if (_graphPts.length < 2) return
+  const c = canvas, ctx = c.getContext('2d')
+  const W = c.width, H = c.height
+  ctx.clearRect(0, 0, W, H)
+  const maxW = Math.max(..._graphPts.map(p => p.w), 1)
+  const maxT = _graphPts[_graphPts.length - 1].t || 1
+  // fill under line
+  ctx.beginPath()
+  _graphPts.forEach((p, i) => {
+    const x = (p.t / maxT) * W
+    const y = H - (p.w / maxW) * H * 0.85 - H * 0.05
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)
+  })
+  ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath()
+  ctx.fillStyle = 'rgba(232,213,176,0.08)'
+  ctx.fill()
+  // line
+  ctx.beginPath()
+  _graphPts.forEach((p, i) => {
+    const x = (p.t / maxT) * W
+    const y = H - (p.w / maxW) * H * 0.85 - H * 0.05
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)
+  })
+  ctx.strokeStyle = 'rgba(232,213,176,0.8)'
+  ctx.lineWidth = 2; ctx.lineJoin = 'round'
+  ctx.stroke()
+}
 
 let flowPrevW = null, flowPrevT = null
 
 const scale = new BLEScale({
   onWeight(g) {
-    scaleLiveG.textContent = g.toFixed(1)
-    scaleLive.classList.remove('hidden')
+    // Update weight display (both mobile stat and desktop block)
+    if (document.getElementById('w-weight').checked) {
+      scaleLiveG.textContent = g.toFixed(1)
+      document.getElementById('scale-live-g') // same element, already updated above
+    }
     // flow rate
     const now = Date.now()
     if (flowPrevW !== null) {
       const dt = (now - flowPrevT) / 1000
       if (dt >= 0.8) {
         const flow = (g - flowPrevW) / dt
-        scaleLiveFlow.textContent = flow > 0.05 ? flow.toFixed(1) : '0.0'
+        const flowStr = flow > 0.05 ? flow.toFixed(1) : '0.0'
+        if (document.getElementById('w-flow').checked) scaleLiveFlow.textContent = flowStr
         flowPrevW = g; flowPrevT = now
       }
     } else {
       flowPrevW = g; flowPrevT = now
     }
+    // cumulative graph
+    _graphPts.push({ w: Math.max(0, g), t: elapsed })
+    if (document.getElementById('w-graph').checked) _drawGraphOn(weightCanvas)
   },
   onState(state, name) {
     scaleBtn.className = state
     if (state === 'connecting') {
-      scaleBtnTx.textContent = '⚖ …'
+      scaleBtnTx.innerHTML = '⚖&nbsp;&nbsp;Подключение…'
+      scaleWidgets.classList.remove('visible')
     } else if (state === 'connected') {
-      scaleBtnTx.textContent = name ? `⚖ ${name}` : '⚖ Весы'
-      scaleLive.classList.remove('hidden')
+      scaleBtnTx.innerHTML = name ? `⚖&nbsp;&nbsp;${name}` : '⚖&nbsp;&nbsp;Весы подключены'
+      scaleWidgets.classList.add('visible')
+      _applyWidgets()
     } else {
-      scaleBtnTx.textContent = '⚖ Весы'
-      scaleLive.classList.add('hidden')
+      scaleBtnTx.innerHTML = '⚖&nbsp;&nbsp;Подключить весы'
+      scaleWidgets.classList.remove('visible')
       scaleLiveG.textContent = '—'
       scaleLiveFlow.textContent = '—'
+      weightCanvas.style.display = 'none'
+      document.getElementById('block-weight').classList.remove('active')
+      document.getElementById('block-flow').classList.remove('active')
+      document.getElementById('block-graph').classList.remove('active')
       flowPrevW = null; flowPrevT = null
     }
   }
@@ -841,9 +1113,6 @@ scaleBtn.addEventListener('click', () => {
 document.getElementById('voice-test-btn').addEventListener('click', async () => {
   if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)()
   if (_audioCtx.state === 'suspended') await _audioCtx.resume()
-  // reload ja voices on demand — they may not be ready on first render
-  const _curMode = document.getElementById('alert-mode').value
-  if ((_curMode === 'ja-anime' || _curMode === 'ja-neutral') && jaVoices.length === 0) loadJaVoices()
   const btn = document.getElementById('voice-test-btn')
   btn.textContent = '♪'
   playAlert()
@@ -855,10 +1124,13 @@ document.getElementById('voice-test-btn').addEventListener('click', async () => 
   const saved = localStorage.getItem('coffee_alert_mode')
   if (saved) {
     const sel = document.getElementById('alert-mode')
-    sel.value = saved
-    const isJa = saved === 'ja-anime' || saved === 'ja-neutral'
-    document.getElementById('ja-voice').style.display = isJa ? '' : 'none'
-    if (isJa) loadJaVoices()
+    // migrate any old ja-* values to beep
+    const migrated = saved.startsWith('ja-') ? 'beep' : saved
+    sel.value = migrated
+    if (migrated !== saved) localStorage.setItem('coffee_alert_mode', migrated)
+  }
+  if (isSimpleMode) {
+    document.getElementById('voice-row').style.display = 'none'
   }
 })()
 </script>

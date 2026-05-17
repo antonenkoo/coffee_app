@@ -2287,3 +2287,49 @@ textarea.calc-modal-input { resize: vertical; min-height: 80px; line-height: 1.5
   background: var(--accent-hover);
   border-color: var(--accent-hover);
 }
+
+/* ─── Desktop / Wide Layout (≥900px) ─────────────────────────────────────── */
+@media (min-width: 900px) {
+  body {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+      "sidebar header"
+      "sidebar main";
+    min-height: 100vh;
+  }
+
+  /* Sidebar always visible on desktop */
+  #sidebar-backdrop { display: none !important; }
+  #sidebar {
+    grid-area: sidebar;
+    position: static;
+    transform: none !important;
+    height: 100%;
+    border-right: 1px solid var(--border);
+  }
+
+  header {
+    grid-area: header;
+    position: sticky;
+    top: 0;
+  }
+
+  /* Hide burger on desktop */
+  #burger-btn { display: none; }
+
+  main {
+    grid-area: main;
+    max-width: 640px;
+    padding: var(--gap-xl) var(--gap-xl) 80px;
+  }
+
+  /* Home cards side-by-side on desktop */
+  .home-mode-cards {
+    flex-direction: row;
+  }
+  .home-card {
+    flex: 1;
+  }
+}

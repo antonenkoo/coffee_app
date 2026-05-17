@@ -1,11 +1,8 @@
 // js/sidebar.js
 export function initSidebar() {
-  const sidebar  = document.getElementById('sidebar')
-  const backdrop = document.getElementById('sidebar-backdrop')
-  const burger   = document.getElementById('burger-btn')
-
+  const burger = document.getElementById('burger-btn')
   burger.addEventListener('click', open)
-  backdrop.addEventListener('click', close)
+  document.getElementById('sidebar-backdrop').addEventListener('click', close)
 
   document.querySelectorAll('.sidebar-nav-btn').forEach(btn => {
     btn.addEventListener('click', close)
@@ -26,8 +23,9 @@ function close() {
 }
 
 function _syncActive() {
-  const hash = location.hash || '#calculator'
+  const hash = location.hash || '#home'
+  const activeHref = hash === '#advanced' ? '#home' : hash
   document.querySelectorAll('.sidebar-nav-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.getAttribute('href') === hash)
+    btn.classList.toggle('active', btn.getAttribute('href') === activeHref)
   })
 }
