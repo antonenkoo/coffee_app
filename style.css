@@ -2214,3 +2214,76 @@ textarea.calc-modal-input { resize: vertical; min-height: 80px; line-height: 1.5
   color: var(--accent);
   box-shadow: 0 0 0 1px var(--accent);
 }
+
+/* ─── Home Mode Cards ────────────────────────────────────────────────────── */
+.home-hero {
+  padding: 32px 0 8px;
+  text-align: center;
+}
+.home-tagline {
+  font-size: 1.1rem;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+}
+.home-mode-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px 0 32px;
+}
+.home-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 28px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.home-card:hover {
+  border-color: rgba(255,255,255,0.15);
+  background: var(--surface-2);
+}
+.home-card-icon {
+  font-size: 2rem;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.home-card-title {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--text);
+}
+.home-card-desc {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.home-card-btn {
+  margin-top: 12px;
+  padding: 9px 20px;
+  border-radius: var(--radius-s);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  font-size: 0.85rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  pointer-events: none;
+}
+.home-card:hover .home-card-btn {
+  border-color: rgba(255,255,255,0.2);
+}
+.home-card-btn--accent {
+  background: var(--accent);
+  color: #111;
+  border-color: var(--accent);
+}
+.home-card:hover .home-card-btn--accent {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}

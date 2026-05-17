@@ -490,6 +490,7 @@ const brewData = JSON.parse(sessionStorage.getItem('brewState') || 'null')
 if (!brewData) { window.location.href = 'index.html' }
 
 const { method, coffee_g, water_g, temp_c, ratio, brew_time_sec, brewSteps } = brewData
+const isSimpleMode = brewData.mode === 'simple'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function fmt(totalSec) {
@@ -523,22 +524,26 @@ function vibrate(pattern = [200, 100, 200]) {
 
 // ── Method badge ─────────────────────────────────────────────────────────────
 document.getElementById('brew-method-badge').textContent =
-  method === 'aeropress' ? 'AeroPress' : 'V60'
+  isSimpleMode ? 'Простой режим' : method === 'aeropress' ? 'AeroPress' : 'V60'
 
 // ── Params info box ──────────────────────────────────────────────────────────
-document.getElementById('brew-params-info').innerHTML = [
-  [t('save.label.coffee'), `${coffee_g}г`],
-  [t('save.label.water'),  `${water_g}г`],
-  [t('save.label.temp'),   `${temp_c}°C`],
-  ['Ratio',                `1:${(+ratio).toFixed(1)}`],
-  [t('save.label.time'),   fmt(brew_time_sec)],
-].map(([l, v]) =>
-  `<div class="brew-param"><span class="brew-param-label">${l}</span><span class="brew-param-value">${v}</span></div>`
-).join('')
+if (isSimpleMode) {
+  document.getElementById('brew-params-info').style.display = 'none'
+} else {
+  document.getElementById('brew-params-info').innerHTML = [
+    [t('save.label.coffee'), `${coffee_g}г`],
+    [t('save.label.water'),  `${water_g}г`],
+    [t('save.label.temp'),   `${temp_c}°C`],
+    ['Ratio',                `1:${(+ratio).toFixed(1)}`],
+    [t('save.label.time'),   fmt(brew_time_sec)],
+  ].map(([l, v]) =>
+    `<div class="brew-param"><span class="brew-param-label">${l}</span><span class="brew-param-value">${v}</span></div>`
+  ).join('')
+}
 
 // ── Separate prep (null) vs timer steps ──────────────────────────────────────
-const prepSteps   = brewSteps.filter(s => s.start_sec === null)
-const timerSteps  = brewSteps.filter(s => s.start_sec !== null)
+const prepSteps   = isSimpleMode ? [] : brewSteps.filter(s => s.start_sec === null)
+const timerSteps  = isSimpleMode ? [] : brewSteps.filter(s => s.start_sec !== null)
 
 if (prepSteps.length > 0) {
   document.getElementById('prep-wrap').classList.remove('hidden')
@@ -665,12 +670,16 @@ function showDone(totalSec) {
   showPhase('phase-done')
   document.getElementById('done-time').textContent =
     t('brew.time.label') + fmt(totalSec)
-  // Save actual brew time back to sessionStorage for save-recipe page
-  try {
-    const stored = JSON.parse(sessionStorage.getItem('brewState') || '{}')
-    stored.actual_brew_time_sec = totalSec
-    sessionStorage.setItem('brewState', JSON.stringify(stored))
-  } catch(_) {}
+  if (isSimpleMode) {
+    document.getElementById('save-btn').style.display = 'none'
+  } else {
+    // Save actual brew time back to sessionStorage for save-recipe page
+    try {
+      const stored = JSON.parse(sessionStorage.getItem('brewState') || '{}')
+      stored.actual_brew_time_sec = totalSec
+      sessionStorage.setItem('brewState', JSON.stringify(stored))
+    } catch(_) {}
+  }
   // Victory beeps
   playBeep(523, 0.18)
   setTimeout(() => playBeep(659, 0.18), 220)
