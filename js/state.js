@@ -14,10 +14,6 @@ export const state = {
   template:         null,        // active recipe ID or null
   templateOrigin:   null,        // snapshot { coffee_g, water_g, ratio, temp_c, brew_time_sec }
 
-  // ─── Pour technique (V60 only) ─────────────────────────────────────────
-  pour_technique:        null,   // null | '3-pour' | '1-pour' | '46' | 'custom-{id}'
-  customTechniqueSteps:  null,   // string | null — steps text for custom techniques
-
   // ─── Filter method ───────────────────────────────────────────────────────
   grind_manual_microns: 700,     // user-set grind size in µm (filter only)
 

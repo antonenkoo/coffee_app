@@ -1119,6 +1119,26 @@ main {
   color: var(--red, #eb5757);
   padding: 4px 0;
 }
+.sound-pref-row { align-items: flex-start !important; }
+.sound-pref-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.preview-sound-btn {
+  flex-shrink: 0;
+  width: 32px; height: 32px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: border-color 0.15s, color 0.15s;
+}
+.preview-sound-btn:hover { border-color: var(--accent); color: var(--accent); }
+
 .settings-select {
   background: var(--surface);
   border: 1px solid var(--border);

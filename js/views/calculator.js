@@ -8,7 +8,7 @@ import {
   renderAll, renderDynamic, renderParams, renderMethodUI,
   renderTemplateOptions, renderTemplateDescription, renderTechniques,
   renderTemplateSuggestion, hideTemplateSuggestion, getPendingSuggestion,
-  getMethodData, renderSteps,
+  getMethodData,
 } from '../ui.js'
 import { openRatioModal, initModal } from '../modal.js'
 import { V60 }       from '../../data/v60.js'
@@ -17,16 +17,14 @@ import { FILTER }    from '../../data/filter.js'
 import { findMatchingRecipe, getRecipeById } from '../RecipeService.js'
 import { checkIsPossible, calcFilterBrewTime } from '../CalculationEngine.js'
 import { getBrewSteps } from '../steps.js'
-import { auth, loadCustomTechniques, saveMyRecipe, saveCustomTechnique } from '../firebase.js'
+import { auth, saveMyRecipe } from '../firebase.js'
 import { isGuest, showAuthOverlay } from '../auth-manager.js'
 import { t } from '../i18n.js'
 import { BLEScale } from '../scale.js'
-import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js'
 
 let _ratioLocked = false
 let _ratioModalOpen = false
 let _dismissedSuggestionId = null
-let _authUnsubscribe = null
 
 export const calculatorView = {
   getHTML() {
@@ -202,26 +200,6 @@ export const calculatorView = {
       </div>
     </section>
 
-    <!-- Pouring Techniques (V60 only) -->
-    <section id="techniques-section" class="hidden">
-      <div class="techniques-header" data-i18n="section.techniques">Техника пролива</div>
-      <div class="techniques-list">
-        <button class="technique-card" data-technique="3-pour">
-          <span class="technique-name" data-i18n="tech.3pour.name">3 пролива</span>
-          <span class="technique-desc" data-i18n="tech.3pour.desc">Блум → 60% воды → 100%. Классический контроль экстракции.</span>
-        </button>
-        <button class="technique-card" data-technique="1-pour">
-          <span class="technique-name" data-i18n="tech.1pour.name">Один пролив</span>
-          <span class="technique-desc" data-i18n="tech.1pour.desc">Все воды одним непрерывным потоком после блума. Метод Хоффманна.</span>
-        </button>
-        <button class="technique-card technique-card--accent" data-technique="46">
-          <span class="technique-name" data-i18n="tech.46.name">4:6 метод</span>
-          <span class="technique-desc" data-i18n="tech.46.desc">40% → 3×20%. Победитель World Brewers Cup 2016. Точный контроль вкуса.</span>
-        </button>
-      </div>
-      <div id="custom-techniques-list"></div>
-    </section>
-
     <!-- BREW Button + Save -->
     <div id="brew-section">
       <button id="brew-btn" data-i18n="btn.brew">▶&nbsp;&nbsp;BREW</button>
@@ -292,56 +270,10 @@ export const calculatorView = {
       </div>
     </div>
 
-    <!-- Create Technique Modal -->
-    <div id="calc-tech-overlay" class="calc-modal-overlay">
-      <div class="calc-modal">
-        <div class="calc-modal-header">
-          <span>Новая техника</span>
-          <button class="calc-modal-close" id="calc-tech-close">×</button>
-        </div>
-        <div class="calc-modal-field">
-          <label class="calc-modal-label">Название</label>
-          <input id="calc-tech-name" type="text" class="calc-modal-input" placeholder="Агрессивный блум, Быстрый пролив...">
-        </div>
-
-        <!-- Bloom row (always first, time = 0 fixed) -->
-        <div class="calc-modal-field">
-          <label class="calc-modal-label">Блум</label>
-          <div class="tech-step-row">
-            <div class="tech-step-field">
-              <span class="tech-step-hint">0 сек</span>
-            </div>
-            <div class="tech-step-field">
-              <input id="tech-bloom-g" type="number" class="calc-modal-input tech-step-input" min="5" max="200" placeholder="30" inputmode="numeric">
-              <span class="tech-step-unit">г</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Dynamic pour rows -->
-        <div id="tech-pours-list"></div>
-
-        <button id="tech-add-pour" class="tech-add-btn">+ Добавить пролив</button>
-
-        <div class="tech-total-row">
-          <span class="tech-total-label">Общее время</span>
-          <span id="tech-total-time" class="tech-total-val">—</span>
-        </div>
-
-        <div id="tech-error" class="tech-error hidden"></div>
-
-        <button id="calc-tech-save-btn" class="calc-modal-save">Создать технику</button>
-      </div>
-    </div>`
+    `
   },
 
   init() {
-    // ── Custom techniques ───────────────────────────────────────────────────────
-    if (_authUnsubscribe) { _authUnsubscribe(); _authUnsubscribe = null }
-    _authUnsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) _loadCustomTechniques()
-    })
-
     // ── Ratio Lock ──────────────────────────────────────────────────────────────
     document.getElementById('ratio-lock-btn')?.addEventListener('click', () => {
       _ratioLocked = !_ratioLocked
@@ -356,18 +288,17 @@ export const calculatorView = {
         const methodData = method === 'v60' ? V60 : method === 'filter' ? FILTER : AEROPRESS
         const r = methodData.ranges
         if (method === 'filter') {
-          setState({ method, template: null, templateOrigin: null, pour_technique: null, ...FILTER.defaults })
+          setState({ method, template: null, templateOrigin: null, ...FILTER.defaults })
         } else {
           const coffee_g = Math.max(r.coffee_g.min, Math.min(r.coffee_g.max, state.coffee_g))
           const ratio    = Math.max(r.ratio.min,    Math.min(r.ratio.max,    state.ratio))
           const water_g  = Math.max(r.water_g.min,  Math.min(r.water_g.max,  Math.round(coffee_g * ratio)))
-          setState({ method, template: null, templateOrigin: null, pour_technique: null,
+          setState({ method, template: null, templateOrigin: null,
             temp_c: methodData.defaults.temp_c, brew_time_sec: methodData.defaults.brew_time_sec,
             coffee_g, ratio, water_g })
         }
         _dismissedSuggestionId = null
         hideTemplateSuggestion()
-        document.querySelectorAll('.technique-card[data-technique]').forEach(c => c.classList.remove('active'))
         renderAll()
       })
     })
@@ -375,11 +306,10 @@ export const calculatorView = {
     // ── Reset ───────────────────────────────────────────────────────────────────
     document.getElementById('reset-btn')?.addEventListener('click', () => {
       const methodData = state.method === 'v60' ? V60 : state.method === 'filter' ? FILTER : AEROPRESS
-      setState({ ...methodData.defaults, template: null, templateOrigin: null, pour_technique: null })
+      setState({ ...methodData.defaults, template: null, templateOrigin: null })
       localStorage.clear()
       _dismissedSuggestionId = null
       hideTemplateSuggestion()
-      document.querySelectorAll('.technique-card[data-technique]').forEach(c => c.classList.remove('active'))
       renderAll()
     })
 
@@ -515,41 +445,13 @@ export const calculatorView = {
       nativeTime.addEventListener('blur', () => { nativeTime.style.pointerEvents = 'none' })
     }
 
-    // ── Technique Selector ──────────────────────────────────────────────────────
-    document.querySelectorAll('.technique-card[data-technique]').forEach(card => {
-      card.addEventListener('click', () => {
-        const tech = card.dataset.technique
-        if (state.template !== null) {
-          const recipe = getRecipeById(state.template)
-          const name = recipe?.name ?? 'текущий рецепт'
-          if (!confirm(`Смена техники изменит шаги — это уже не оригинальный рецепт «${name}». Продолжить?`)) return
-          setState({ template: null, templateOrigin: null })
-          const sel = document.getElementById('template-select')
-          if (sel) sel.value = ''
-          hideTemplateSuggestion()
-          renderTemplateDescription(null)
-        }
-        const newTech = state.pour_technique === tech ? null : tech
-        setState({ pour_technique: newTech, customTechniqueSteps: null })
-        document.querySelectorAll('.technique-card[data-technique]').forEach(c =>
-          c.classList.toggle('active', c.dataset.technique === newTech)
-        )
-        renderSteps()
-      })
-    })
-
     // ── Save Recipe (quick save) ─────────────────────────────────────────────
     document.getElementById('save-recipe-btn')?.addEventListener('click', () => {
       if (isGuest() || !auth.currentUser) { showAuthOverlay(); return }
       const METHOD_LABELS = { v60: 'V60', aeropress: 'AeroPress', filter: 'Filter' }
-      const TECH_LABELS   = { '3-pour': '3 пролива', '1-pour': 'Один пролив', '46': '4:6 метод' }
       const fmtTime = (s) => { if (!s) return ''; const m = Math.floor(s/60); return `${m}:${String(s%60).padStart(2,'0')}` }
-      const techName = state.pour_technique
-        ? (TECH_LABELS[state.pour_technique] || state.pour_technique.replace(/^custom-/, ''))
-        : null
       const preview = [
         METHOD_LABELS[state.method] ?? state.method,
-        techName ? `⇢ ${techName}` : null,
       ].filter(Boolean).join(' · ') + '\n' + [
         state.coffee_g ? `${state.coffee_g}г кофе` : null,
         state.water_g  ? `${state.water_g}мл воды` : null,
@@ -582,8 +484,6 @@ export const calculatorView = {
           ratio: state.ratio,
           temp_c: state.temp_c,
           brew_time_sec: state.brew_time_sec,
-          technique: state.pour_technique ?? null,
-          customTechniqueSteps: state.customTechniqueSteps ?? null,
           aeropress_style: state.aeropress_style ?? null,
           bean: document.getElementById('calc-save-bean').value.trim() || null,
           notes: document.getElementById('calc-save-notes').value.trim() || null,
@@ -596,119 +496,6 @@ export const calculatorView = {
       }
     })
 
-    // ── Create Technique Modal ────────────────────────────────────────────────
-    document.getElementById('calc-tech-close').addEventListener('click', () =>
-      document.getElementById('calc-tech-overlay').classList.remove('visible')
-    )
-    document.getElementById('calc-tech-overlay').addEventListener('click', (e) => {
-      if (e.target === document.getElementById('calc-tech-overlay'))
-        document.getElementById('calc-tech-overlay').classList.remove('visible')
-    })
-    // ── Technique constructor ────────────────────────────────────────────────────
-    let _pourCount = 0
-
-    function _refreshTotalTime() {
-      const pours = document.querySelectorAll('.tech-pour-row')
-      if (!pours.length) {
-        document.getElementById('tech-total-time').textContent = '—'
-        return
-      }
-      const last = pours[pours.length - 1]
-      const sec  = parseInt(last.querySelector('.tech-pour-sec').value || '0')
-      const m = Math.floor(sec / 60), s = sec % 60
-      document.getElementById('tech-total-time').textContent =
-        `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`
-    }
-
-    function _addPourRow() {
-      _pourCount++
-      const idx  = _pourCount
-      const list = document.getElementById('tech-pours-list')
-      const row  = document.createElement('div')
-      row.className = 'calc-modal-field tech-pour-row'
-      row.dataset.idx = idx
-      row.innerHTML = `
-        <label class="calc-modal-label">Пролив ${idx}</label>
-        <div class="tech-step-row">
-          <div class="tech-step-field">
-            <input type="number" class="calc-modal-input tech-step-input tech-pour-sec"
-              min="1" max="3600" placeholder="сек" inputmode="numeric">
-            <span class="tech-step-unit">сек</span>
-          </div>
-          <div class="tech-step-field">
-            <input type="number" class="calc-modal-input tech-step-input tech-pour-g"
-              min="1" max="2000" placeholder="г" inputmode="numeric">
-            <span class="tech-step-unit">г</span>
-          </div>
-          <button class="tech-remove-btn" data-idx="${idx}">✕</button>
-        </div>`
-      row.querySelector('.tech-pour-sec').addEventListener('input', _refreshTotalTime)
-      row.querySelector('.tech-remove-btn').addEventListener('click', () => {
-        row.remove()
-        _pourCount = document.querySelectorAll('.tech-pour-row').length
-        document.querySelectorAll('.tech-pour-row').forEach((r, i) => {
-          r.querySelector('.calc-modal-label').textContent = `Пролив ${i + 1}`
-        })
-        _refreshTotalTime()
-      })
-      list.appendChild(row)
-      row.querySelector('.tech-pour-sec').focus()
-    }
-
-    document.getElementById('tech-add-pour').addEventListener('click', _addPourRow)
-
-    document.getElementById('calc-tech-save-btn').addEventListener('click', async () => {
-      const name     = document.getElementById('calc-tech-name').value.trim()
-      const bloomG   = parseFloat(document.getElementById('tech-bloom-g').value || '0')
-      const errorEl  = document.getElementById('tech-error')
-      errorEl.classList.add('hidden')
-
-      if (!name) { errorEl.textContent = 'Введите название'; errorEl.classList.remove('hidden'); return }
-      if (!bloomG || bloomG < 5) { errorEl.textContent = 'Укажите граммы блума (мин. 5г)'; errorEl.classList.remove('hidden'); return }
-
-      // collect pour rows
-      const pourRows = document.querySelectorAll('.tech-pour-row')
-      const steps = [{ sec: 0, g: bloomG, label: 'Bloom' }]
-      let prevSec = 0
-      let valid = true
-
-      pourRows.forEach((row, i) => {
-        const sec = parseInt(row.querySelector('.tech-pour-sec').value || '0')
-        const g   = parseFloat(row.querySelector('.tech-pour-g').value || '0')
-        if (sec <= prevSec) {
-          errorEl.textContent = `Пролив ${i + 1}: время (${sec}с) должно быть больше предыдущего (${prevSec}с)`
-          errorEl.classList.remove('hidden')
-          valid = false
-          return
-        }
-        if (!g || g < 1) {
-          errorEl.textContent = `Пролив ${i + 1}: укажите граммы`
-          errorEl.classList.remove('hidden')
-          valid = false
-          return
-        }
-        prevSec = sec
-        steps.push({ sec, g, label: `Pour ${i + 1}` })
-      })
-
-      if (!valid) return
-
-      const btn = document.getElementById('calc-tech-save-btn')
-      btn.disabled = true; btn.textContent = 'Создание...'
-      try {
-        await saveCustomTechnique({ name, description: '', steps: JSON.stringify(steps) })
-        document.getElementById('calc-tech-name').value = ''
-        document.getElementById('tech-bloom-g').value  = ''
-        document.getElementById('tech-pours-list').innerHTML = ''
-        _pourCount = 0
-        _refreshTotalTime()
-        document.getElementById('calc-tech-overlay').classList.remove('visible')
-        _loadCustomTechniques()
-      } catch (e) {
-        alert(`Ошибка: ${e.message}`)
-      } finally { btn.disabled = false; btn.textContent = 'Создать технику' }
-    })
-
     // ── Brew Button ─────────────────────────────────────────────────────────────
     document.getElementById('brew-btn')?.addEventListener('click', () => {
       if (!state.isPossible) return
@@ -716,7 +503,6 @@ export const calculatorView = {
       sessionStorage.setItem('brewState', JSON.stringify({
         method: state.method, coffee_g: state.coffee_g, water_g: state.water_g,
         ratio: state.ratio, temp_c: state.temp_c, brew_time_sec: state.brew_time_sec,
-        pour_technique: state.pour_technique, customTechniqueSteps: state.customTechniqueSteps,
         aeropress_style: state.aeropress_style, brewSteps,
       }))
       window.location.href = 'brew.html'
@@ -790,97 +576,26 @@ export const calculatorView = {
     // ── Init Render ─────────────────────────────────────────────────────────────
     renderAll()
 
-    // Restore active technique buttons from state
-    if (state.pour_technique) {
-      document.querySelectorAll('.technique-card[data-technique]').forEach(c =>
-        c.classList.toggle('active', c.dataset.technique === state.pour_technique)
-      )
-    }
-
     // Apply recipe loaded from Feed / My Recipes
     const _ext = JSON.parse(sessionStorage.getItem('externalRecipe') || 'null')
     if (_ext) {
       sessionStorage.removeItem('externalRecipe')
       const methodData = _ext.method === 'v60' ? V60 : _ext.method === 'filter' ? FILTER : AEROPRESS
       setState({
-        method:               _ext.method ?? 'v60',
-        coffee_g:             _ext.coffee_g   ?? methodData.defaults.coffee_g,
-        water_g:              _ext.water_g    ?? methodData.defaults.water_g,
-        ratio:                _ext.ratio      ?? (_ext.water_g / _ext.coffee_g),
-        temp_c:               _ext.temp_c     ?? methodData.defaults.temp_c,
-        brew_time_sec:        _ext.brew_time_sec ?? methodData.defaults.brew_time_sec,
-        template:             null, templateOrigin: null,
-        pour_technique:       _ext.technique ?? null,
-        customTechniqueSteps: _ext.customTechniqueSteps ?? null,
+        method:        _ext.method ?? 'v60',
+        coffee_g:      _ext.coffee_g   ?? methodData.defaults.coffee_g,
+        water_g:       _ext.water_g    ?? methodData.defaults.water_g,
+        ratio:         _ext.ratio      ?? (_ext.water_g / _ext.coffee_g),
+        temp_c:        _ext.temp_c     ?? methodData.defaults.temp_c,
+        brew_time_sec: _ext.brew_time_sec ?? methodData.defaults.brew_time_sec,
+        template:      null, templateOrigin: null,
       })
-      if (_ext.technique) {
-        document.querySelectorAll('.technique-card[data-technique]').forEach(c =>
-          c.classList.toggle('active', c.dataset.technique === _ext.technique)
-        )
-      }
       renderAll()
     }
   }
 }
 
 // ── Private helpers ───────────────────────────────────────────────────────────
-
-async function _loadCustomTechniques() {
-  try {
-    const techniques = await loadCustomTechniques()
-    _renderCustomTechniques(techniques)
-  } catch (e) {
-    console.error('Failed to load custom techniques:', e)
-  }
-}
-
-function _renderCustomTechniques(techniques) {
-  const list = document.getElementById('custom-techniques-list')
-  if (!list) return
-  list.innerHTML = ''
-  techniques.forEach(tech => {
-    const btn = document.createElement('button')
-    btn.className = 'technique-card'
-    btn.dataset.technique = `custom-${tech.id}`
-    btn.innerHTML = `
-      <span class="technique-name">${tech.name}</span>
-      ${tech.description ? `<span class="technique-desc">${tech.description}</span>` : ''}`
-    btn.addEventListener('click', () => {
-      const techId = `custom-${tech.id}`
-      if (state.template !== null) {
-        const recipe = getRecipeById(state.template)
-        const name = recipe?.name ?? 'текущий рецепт'
-        if (!confirm(`Смена техники изменит шаги — это уже не оригинальный рецепт «${name}». Продолжить?`)) return
-        setState({ template: null, templateOrigin: null })
-        const sel = document.getElementById('template-select')
-        if (sel) sel.value = ''
-        hideTemplateSuggestion()
-        renderTemplateDescription(null)
-      }
-      const newTech = state.pour_technique === techId ? null : techId
-      setState({ pour_technique: newTech, customTechniqueSteps: newTech ? (tech.steps || tech.description || '') : null })
-      document.querySelectorAll('.technique-card[data-technique]').forEach(c =>
-        c.classList.toggle('active', c.dataset.technique === newTech)
-      )
-      renderSteps()
-    })
-    list.appendChild(btn)
-  })
-  // "+ Создать технику" card
-  const createCard = document.createElement('button')
-  createCard.className = 'technique-card technique-card--create'
-  createCard.textContent = '+ Создать технику'
-  createCard.addEventListener('click', () => {
-    document.getElementById('calc-tech-name').value = ''
-    document.getElementById('tech-bloom-g').value   = ''
-    document.getElementById('tech-pours-list').innerHTML = ''
-    document.getElementById('tech-error').classList.add('hidden')
-    document.getElementById('tech-total-time').textContent = '—'
-    document.getElementById('calc-tech-overlay').classList.add('visible')
-    setTimeout(() => document.getElementById('calc-tech-name')?.focus(), 50)
-  })
-  list.appendChild(createCard)
-}
 
 function _afterChange() {
   setState({ isPossible: checkIsPossible(state, getMethodData()) })
