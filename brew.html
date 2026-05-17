@@ -56,16 +56,113 @@
     }
     #stop-btn:hover { border-color: var(--text); color: var(--text); }
 
-    /* ── Method badge (top-right) ───────── */
-    #brew-method-badge {
+    /* ── Top-right cluster (method + scale) ─── */
+    #top-right {
       position: absolute;
-      top: 24px;
+      top: 16px;
       right: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
+    }
+    #brew-method-badge {
       font-size: 0.7rem;
       color: var(--dim);
       letter-spacing: 0.08em;
       text-transform: uppercase;
     }
+
+    /* ── Scale connect button ────────────── */
+    #scale-btn {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      color: var(--muted);
+      font-size: 0.7rem;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s, background 0.15s;
+      white-space: nowrap;
+      user-select: none;
+    }
+    #scale-btn:hover { border-color: var(--accent); color: var(--accent); }
+    #scale-btn.connecting { color: var(--muted); animation: scale-pulse 1s ease-in-out infinite; }
+    #scale-btn.connected  { border-color: rgba(232,213,176,0.4); color: var(--accent); }
+    #scale-btn.unsupported { opacity: 0.3; cursor: not-allowed; pointer-events: none; }
+    #scale-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+      display: none;
+    }
+    #scale-btn.connected #scale-dot { display: block; }
+
+    @keyframes scale-pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+    /* ── Live weight + flow in brew phase ── */
+    #scale-live {
+      display: flex;
+      gap: 24px;
+      justify-content: center;
+      padding: 0 0 20px;
+    }
+    .scale-stat {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+    .scale-stat-label {
+      font-size: 0.55rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--dim);
+    }
+    .scale-stat-row {
+      display: flex;
+      align-items: baseline;
+      gap: 3px;
+    }
+    .scale-stat-val {
+      font-size: 2.4rem;
+      font-weight: 700;
+      color: var(--accent);
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+    }
+    .scale-stat-unit {
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    /* ── Voice settings row ─────────────── */
+    #voice-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      width: 100%;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    #voice-row select {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 0.8rem;
+      padding: 4px 8px;
+      cursor: pointer;
+    }
+    #voice-row select:focus { outline: none; border-color: var(--accent); }
 
     /* ── Phase containers ───────────────── */
     .phase {
@@ -296,7 +393,13 @@
 <body>
 <div id="brew-app">
   <button id="stop-btn" title="Остановить">✕</button>
-  <div id="brew-method-badge"></div>
+  <div id="top-right">
+    <div id="brew-method-badge"></div>
+    <button id="scale-btn" title="Подключить весы">
+      <span id="scale-dot"></span>
+      <span id="scale-btn-text">⚖ Весы</span>
+    </button>
+  </div>
 
   <!-- ── START PHASE ─────────────────────────── -->
   <div id="phase-start" class="phase">
@@ -304,6 +407,16 @@
     <div id="prep-wrap" class="hidden">
       <div class="prep-title" data-i18n="brew.prep.title">Подготовка перед таймером:</div>
       <div id="prep-list"></div>
+    </div>
+    <div id="voice-row">
+      <span>🔔</span>
+      <select id="alert-mode">
+        <option value="off">Без звука</option>
+        <option value="beep" selected>Бип</option>
+        <option value="ja">Японский голос ✦</option>
+      </select>
+      <select id="ja-voice" style="display:none"></select>
+      <button id="voice-test-btn" title="Проверить звук" style="flex-shrink:0;padding:4px 8px;background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--muted);font-size:0.8rem;cursor:pointer;">▶</button>
     </div>
     <button id="start-btn" data-i18n="brew.start.btn">▶&nbsp;&nbsp;Начать заваривание</button>
   </div>
@@ -317,6 +430,22 @@
   <div id="phase-brew" class="phase hidden">
     <div id="progress-wrap"><div id="progress-fill"></div></div>
     <div id="brew-timer">00:00</div>
+    <div id="scale-live" class="hidden">
+      <div class="scale-stat">
+        <span class="scale-stat-label">Вес</span>
+        <div class="scale-stat-row">
+          <span id="scale-live-g" class="scale-stat-val">—</span>
+          <span class="scale-stat-unit">г</span>
+        </div>
+      </div>
+      <div class="scale-stat">
+        <span class="scale-stat-label">Поток</span>
+        <div class="scale-stat-row">
+          <span id="scale-live-flow" class="scale-stat-val">—</span>
+          <span class="scale-stat-unit">г/с</span>
+        </div>
+      </div>
+    </div>
     <div id="current-step-wrap">
       <div id="current-label" data-i18n="brew.current.label">Текущий шаг</div>
       <div id="current-action"></div>
@@ -343,6 +472,7 @@
 
 <script type="module">
 import { t, applyI18n } from './js/i18n.js'
+import { BLEScale }     from './js/scale.js'
 applyI18n()
 
 // ── Read brew data from sessionStorage ───────────────────────────────────────
@@ -420,7 +550,7 @@ function showPhase(id) {
 function startCountdown() {
   showPhase('phase-countdown')
   const numEl = document.getElementById('countdown-num')
-  let count = 5
+  let count = 3
 
   const tick = () => {
     numEl.textContent = count
@@ -506,12 +636,16 @@ function startBrew() {
       }
     }
 
-    // Update "next in" countdown
+    // Update "next in" countdown + voice alert at 5 sec
     const next = timerSteps[currentIdx + 1]
     if (next) {
       const rem = next.start_sec - elapsed
       document.getElementById('next-in').textContent =
         rem > 0 ? `через ${fmt(rem)}` : 'сейчас!'
+      if (rem === 5 && voiceAlertSentForStep !== currentIdx + 1) {
+        voiceAlertSentForStep = currentIdx + 1
+        playAlert()
+      }
     }
   }, 1000)
 }
@@ -554,6 +688,128 @@ document.getElementById('back-btn').addEventListener('click', () => {
   const ok = confirm(t('brew.exit.confirm'))
   if (ok) window.location.href = 'index.html'
 })
+
+// ── Voice alerts ─────────────────────────────────────────────────────────────
+const ALERT_PHRASES = [
+  'もうすぐ注ぐ時間ですよ',
+  '準備してください',
+  'あと五秒です、準備して',
+  'そろそろお湯を注いで',
+  'もうすぐですよ',
+]
+
+let jaVoices = []
+let voiceAlertSentForStep = -1
+
+function loadJaVoices() {
+  jaVoices = speechSynthesis.getVoices().filter(v => v.lang.startsWith('ja'))
+  const sel = document.getElementById('ja-voice')
+  if (jaVoices.length === 0) return
+  sel.innerHTML = jaVoices.map((v, i) =>
+    `<option value="${i}">${v.name}</option>`
+  ).join('')
+}
+if ('speechSynthesis' in window) {
+  speechSynthesis.addEventListener('voiceschanged', loadJaVoices)
+  loadJaVoices()
+}
+
+document.getElementById('alert-mode').addEventListener('change', function() {
+  const jaVoiceSel = document.getElementById('ja-voice')
+  jaVoiceSel.style.display = this.value === 'ja' ? '' : 'none'
+  if (this.value === 'ja') loadJaVoices()
+})
+
+function playAlert() {
+  const mode = document.getElementById('alert-mode').value
+  if (mode === 'off') return
+  if (mode === 'beep') {
+    playBeep(660, 0.12)
+    setTimeout(() => playBeep(880, 0.2), 160)
+    return
+  }
+  if (mode === 'ja' && 'speechSynthesis' in window) {
+    const phrase = ALERT_PHRASES[Math.floor(Math.random() * ALERT_PHRASES.length)]
+    const utter  = new SpeechSynthesisUtterance(phrase)
+    utter.lang   = 'ja-JP'
+    utter.rate   = 1.1
+    utter.pitch  = 1.3
+    const idx = parseInt(document.getElementById('ja-voice').value || '0')
+    if (jaVoices[idx]) utter.voice = jaVoices[idx]
+    speechSynthesis.speak(utter)
+  }
+}
+
+// ── BLE Scale ────────────────────────────────────────────────────────────────
+const scaleLive    = document.getElementById('scale-live')
+const scaleLiveG   = document.getElementById('scale-live-g')
+const scaleLiveFlow = document.getElementById('scale-live-flow')
+const scaleBtn     = document.getElementById('scale-btn')
+const scaleBtnTx   = document.getElementById('scale-btn-text')
+
+let flowPrevW = null, flowPrevT = null
+
+const scale = new BLEScale({
+  onWeight(g) {
+    scaleLiveG.textContent = g.toFixed(1)
+    scaleLive.classList.remove('hidden')
+    // flow rate
+    const now = Date.now()
+    if (flowPrevW !== null) {
+      const dt = (now - flowPrevT) / 1000
+      if (dt >= 0.8) {
+        const flow = (g - flowPrevW) / dt
+        scaleLiveFlow.textContent = flow > 0.05 ? flow.toFixed(1) : '0.0'
+        flowPrevW = g; flowPrevT = now
+      }
+    } else {
+      flowPrevW = g; flowPrevT = now
+    }
+  },
+  onState(state, name) {
+    scaleBtn.className = state
+    if (state === 'connecting') {
+      scaleBtnTx.textContent = '⚖ …'
+    } else if (state === 'connected') {
+      scaleBtnTx.textContent = name ? `⚖ ${name}` : '⚖ Весы'
+      scaleLive.classList.remove('hidden')
+    } else {
+      scaleBtnTx.textContent = '⚖ Весы'
+      scaleLive.classList.add('hidden')
+      scaleLiveG.textContent = '—'
+      scaleLiveFlow.textContent = '—'
+      flowPrevW = null; flowPrevT = null
+    }
+  }
+})
+
+if (!scale.supported) {
+  scaleBtn.classList.add('unsupported')
+  scaleBtn.title = 'Web Bluetooth не поддерживается в этом браузере'
+}
+
+scaleBtn.addEventListener('click', () => {
+  if (scale.state === 'connected') scale.disconnect()
+  else if (scale.state === 'disconnected') scale.connect()
+})
+
+// ── Voice test button ────────────────────────────────────────────────────────
+document.getElementById('voice-test-btn').addEventListener('click', () => {
+  if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)()
+  playAlert()
+})
+
+// ── Restore alert mode from localStorage ────────────────────────────────────
+;(function() {
+  const saved = localStorage.getItem('coffee_alert_mode')
+  if (saved) {
+    const sel = document.getElementById('alert-mode')
+    sel.value = saved
+    const jaVoiceSel = document.getElementById('ja-voice')
+    jaVoiceSel.style.display = saved === 'ja' ? '' : 'none'
+    if (saved === 'ja') loadJaVoices()
+  }
+})()
 </script>
 </body>
 </html>

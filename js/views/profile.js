@@ -77,6 +77,14 @@ export const profileView = {
           </div>
         </div>
         <div class="settings-row">
+          <span class="settings-label">Звук будильника</span>
+          <select id="pref-alert-mode" class="settings-select">
+            <option value="off">Выкл</option>
+            <option value="beep">Бип</option>
+            <option value="ja">Японский голос ✦</option>
+          </select>
+        </div>
+        <div class="settings-row">
           <span class="settings-label" data-i18n="profile.version">Версия</span>
           <a href="changelog.html" class="settings-value settings-value--accent" style="text-decoration:none;">v2.5</a>
         </div>
@@ -140,6 +148,17 @@ export const profileView = {
         document.getElementById('techniques-count-val').textContent = _techniquesCount
         document.getElementById('clear-recipes-btn').disabled    = _recipesCount === 0
         document.getElementById('clear-techniques-btn').disabled = _techniquesCount === 0
+
+        // Sound preference
+        const alertSel = document.getElementById('pref-alert-mode')
+        if (alertSel) {
+          const saved = localStorage.getItem('coffee_alert_mode') || 'beep'
+          alertSel.value = saved
+          alertSel.addEventListener('change', () => {
+            localStorage.setItem('coffee_alert_mode', alertSel.value)
+            updateUserProfile({ pref_alert_mode: alertSel.value }).catch(() => {})
+          })
+        }
       } catch (e) { console.error('Profile load error:', e) }
     })
 

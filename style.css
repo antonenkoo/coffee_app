@@ -1005,6 +1005,130 @@ main {
   color: var(--accent);
 }
 
+.method-row-right {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+#calc-scale-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-s);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+#calc-scale-btn:hover          { border-color: var(--accent); color: var(--accent); }
+#calc-scale-btn.connecting     { animation: scale-pulse 1s ease-in-out infinite; }
+#calc-scale-btn.connected      { border-color: rgba(232,213,176,0.4); color: var(--accent); }
+@keyframes scale-pulse         { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+#calc-scale-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #6fcf97;
+  display: none;
+}
+#calc-scale-btn.connected #calc-scale-dot { display: block; }
+
+#calc-scale-weight {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 6px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-s);
+  font-size: 1.4rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}
+#calc-scale-weight span:last-child { font-size: 0.85rem; color: var(--text-muted); font-weight: 400; }
+
+/* ─── Technique step constructor ──────────────────────────────────────────── */
+.tech-step-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.tech-step-field {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+}
+.tech-step-input {
+  width: 80px !important;
+  text-align: center;
+}
+.tech-step-hint {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+.tech-step-unit {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.tech-add-btn {
+  width: 100%;
+  padding: 9px;
+  background: transparent;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-s);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.tech-add-btn:hover { border-color: var(--accent); color: var(--accent); }
+.tech-remove-btn {
+  width: 28px; height: 28px;
+  flex-shrink: 0;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  color: var(--text-dim);
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+  display: flex; align-items: center; justify-content: center;
+}
+.tech-remove-btn:hover { border-color: var(--red, #eb5757); color: var(--red, #eb5757); }
+.tech-total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0 2px;
+  border-top: 1px solid var(--border);
+}
+.tech-total-label { font-size: 0.8rem; color: var(--text-muted); }
+.tech-total-val { font-size: 0.95rem; font-weight: 600; color: var(--accent); font-variant-numeric: tabular-nums; }
+.tech-error {
+  font-size: 0.8rem;
+  color: var(--red, #eb5757);
+  padding: 4px 0;
+}
+.settings-select {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 0.85rem;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+
 /* ─── Param Field (column wrapper for input + error + hint) ────────────── */
 .param-row {
   align-items: flex-start;  /* allow sub-content below input */

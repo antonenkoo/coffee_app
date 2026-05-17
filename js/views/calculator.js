@@ -20,6 +20,7 @@ import { getBrewSteps } from '../steps.js'
 import { auth, loadCustomTechniques, saveMyRecipe, saveCustomTechnique } from '../firebase.js'
 import { isGuest, showAuthOverlay } from '../auth-manager.js'
 import { t } from '../i18n.js'
+import { BLEScale } from '../scale.js'
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js'
 
 let _ratioLocked = false
@@ -30,14 +31,24 @@ let _authUnsubscribe = null
 export const calculatorView = {
   getHTML() {
     return `
-    <!-- Method Selector + Reset -->
+    <!-- Method Selector + Reset + Scale -->
     <div class="method-row">
       <section id="method-selector">
         <button class="method-btn active" data-method="v60">V60</button>
         <button class="method-btn" data-method="aeropress">AeroPress</button>
         <button class="method-btn" data-method="filter">Filter</button>
       </section>
-      <button id="reset-btn" title="Сбросить к дефолтам">↺</button>
+      <div class="method-row-right">
+        <button id="calc-scale-btn" title="Подключить весы">
+          <span id="calc-scale-dot"></span>
+          <span id="calc-scale-txt">⚖</span>
+        </button>
+        <button id="reset-btn" title="Сбросить к дефолтам">↺</button>
+      </div>
+    </div>
+    <div id="calc-scale-weight" class="hidden">
+      <span id="calc-scale-g">—</span>
+      <span>г</span>
     </div>
 
     <!-- Recipe Template Selector -->
@@ -292,14 +303,33 @@ export const calculatorView = {
           <label class="calc-modal-label">Название</label>
           <input id="calc-tech-name" type="text" class="calc-modal-input" placeholder="Агрессивный блум, Быстрый пролив...">
         </div>
+
+        <!-- Bloom row (always first, time = 0 fixed) -->
         <div class="calc-modal-field">
-          <label class="calc-modal-label">Описание</label>
-          <input id="calc-tech-desc" type="text" class="calc-modal-input" placeholder="Краткое описание">
+          <label class="calc-modal-label">Блум</label>
+          <div class="tech-step-row">
+            <div class="tech-step-field">
+              <span class="tech-step-hint">0 сек</span>
+            </div>
+            <div class="tech-step-field">
+              <input id="tech-bloom-g" type="number" class="calc-modal-input tech-step-input" min="5" max="200" placeholder="30" inputmode="numeric">
+              <span class="tech-step-unit">г</span>
+            </div>
+          </div>
         </div>
-        <div class="calc-modal-field">
-          <label class="calc-modal-label">Шаги</label>
-          <textarea id="calc-tech-steps" class="calc-modal-input" placeholder="Каждый шаг с новой строки:&#10;Bloom: 30г, 40 сек&#10;Пролив 1: до 150г"></textarea>
+
+        <!-- Dynamic pour rows -->
+        <div id="tech-pours-list"></div>
+
+        <button id="tech-add-pour" class="tech-add-btn">+ Добавить пролив</button>
+
+        <div class="tech-total-row">
+          <span class="tech-total-label">Общее время</span>
+          <span id="tech-total-time" class="tech-total-val">—</span>
         </div>
+
+        <div id="tech-error" class="tech-error hidden"></div>
+
         <button id="calc-tech-save-btn" class="calc-modal-save">Создать технику</button>
       </div>
     </div>`
@@ -574,18 +604,104 @@ export const calculatorView = {
       if (e.target === document.getElementById('calc-tech-overlay'))
         document.getElementById('calc-tech-overlay').classList.remove('visible')
     })
+    // ── Technique constructor ────────────────────────────────────────────────────
+    let _pourCount = 0
+
+    function _refreshTotalTime() {
+      const pours = document.querySelectorAll('.tech-pour-row')
+      if (!pours.length) {
+        document.getElementById('tech-total-time').textContent = '—'
+        return
+      }
+      const last = pours[pours.length - 1]
+      const sec  = parseInt(last.querySelector('.tech-pour-sec').value || '0')
+      const m = Math.floor(sec / 60), s = sec % 60
+      document.getElementById('tech-total-time').textContent =
+        `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`
+    }
+
+    function _addPourRow() {
+      _pourCount++
+      const idx  = _pourCount
+      const list = document.getElementById('tech-pours-list')
+      const row  = document.createElement('div')
+      row.className = 'calc-modal-field tech-pour-row'
+      row.dataset.idx = idx
+      row.innerHTML = `
+        <label class="calc-modal-label">Пролив ${idx}</label>
+        <div class="tech-step-row">
+          <div class="tech-step-field">
+            <input type="number" class="calc-modal-input tech-step-input tech-pour-sec"
+              min="1" max="3600" placeholder="сек" inputmode="numeric">
+            <span class="tech-step-unit">сек</span>
+          </div>
+          <div class="tech-step-field">
+            <input type="number" class="calc-modal-input tech-step-input tech-pour-g"
+              min="1" max="2000" placeholder="г" inputmode="numeric">
+            <span class="tech-step-unit">г</span>
+          </div>
+          <button class="tech-remove-btn" data-idx="${idx}">✕</button>
+        </div>`
+      row.querySelector('.tech-pour-sec').addEventListener('input', _refreshTotalTime)
+      row.querySelector('.tech-remove-btn').addEventListener('click', () => {
+        row.remove()
+        _pourCount = document.querySelectorAll('.tech-pour-row').length
+        document.querySelectorAll('.tech-pour-row').forEach((r, i) => {
+          r.querySelector('.calc-modal-label').textContent = `Пролив ${i + 1}`
+        })
+        _refreshTotalTime()
+      })
+      list.appendChild(row)
+      row.querySelector('.tech-pour-sec').focus()
+    }
+
+    document.getElementById('tech-add-pour').addEventListener('click', _addPourRow)
+
     document.getElementById('calc-tech-save-btn').addEventListener('click', async () => {
-      const name  = document.getElementById('calc-tech-name').value.trim()
-      const desc  = document.getElementById('calc-tech-desc').value.trim()
-      const steps = document.getElementById('calc-tech-steps').value.trim()
-      if (!name) { alert('Введите название техники'); return }
+      const name     = document.getElementById('calc-tech-name').value.trim()
+      const bloomG   = parseFloat(document.getElementById('tech-bloom-g').value || '0')
+      const errorEl  = document.getElementById('tech-error')
+      errorEl.classList.add('hidden')
+
+      if (!name) { errorEl.textContent = 'Введите название'; errorEl.classList.remove('hidden'); return }
+      if (!bloomG || bloomG < 5) { errorEl.textContent = 'Укажите граммы блума (мин. 5г)'; errorEl.classList.remove('hidden'); return }
+
+      // collect pour rows
+      const pourRows = document.querySelectorAll('.tech-pour-row')
+      const steps = [{ sec: 0, g: bloomG, label: 'Bloom' }]
+      let prevSec = 0
+      let valid = true
+
+      pourRows.forEach((row, i) => {
+        const sec = parseInt(row.querySelector('.tech-pour-sec').value || '0')
+        const g   = parseFloat(row.querySelector('.tech-pour-g').value || '0')
+        if (sec <= prevSec) {
+          errorEl.textContent = `Пролив ${i + 1}: время (${sec}с) должно быть больше предыдущего (${prevSec}с)`
+          errorEl.classList.remove('hidden')
+          valid = false
+          return
+        }
+        if (!g || g < 1) {
+          errorEl.textContent = `Пролив ${i + 1}: укажите граммы`
+          errorEl.classList.remove('hidden')
+          valid = false
+          return
+        }
+        prevSec = sec
+        steps.push({ sec, g, label: `Pour ${i + 1}` })
+      })
+
+      if (!valid) return
+
       const btn = document.getElementById('calc-tech-save-btn')
       btn.disabled = true; btn.textContent = 'Создание...'
       try {
-        await saveCustomTechnique({ name, description: desc, steps })
-        document.getElementById('calc-tech-name').value  = ''
-        document.getElementById('calc-tech-desc').value  = ''
-        document.getElementById('calc-tech-steps').value = ''
+        await saveCustomTechnique({ name, description: '', steps: JSON.stringify(steps) })
+        document.getElementById('calc-tech-name').value = ''
+        document.getElementById('tech-bloom-g').value  = ''
+        document.getElementById('tech-pours-list').innerHTML = ''
+        _pourCount = 0
+        _refreshTotalTime()
         document.getElementById('calc-tech-overlay').classList.remove('visible')
         _loadCustomTechniques()
       } catch (e) {
@@ -630,6 +746,43 @@ export const calculatorView = {
         input.dispatchEvent(new Event('input', { bubbles: true }))
       })
     })
+
+    // ── Scale ────────────────────────────────────────────────────────────────────
+    const calcScaleBtn = document.getElementById('calc-scale-btn')
+    const calcScaleTxt = document.getElementById('calc-scale-txt')
+    const calcScaleG   = document.getElementById('calc-scale-g')
+    const calcScaleWrap = document.getElementById('calc-scale-weight')
+
+    if (calcScaleBtn) {
+      const calcScale = new BLEScale({
+        onWeight(g) {
+          if (calcScaleG) calcScaleG.textContent = g.toFixed(1)
+          calcScaleWrap?.classList.remove('hidden')
+        },
+        onState(s, name) {
+          if (!calcScaleBtn) return
+          calcScaleBtn.className = 'calc-scale-' + s
+          if (s === 'connecting') {
+            calcScaleTxt.textContent = '⚖'
+            calcScaleBtn.classList.add('connecting')
+          } else if (s === 'connected') {
+            calcScaleTxt.textContent = name ? `⚖ ${name.slice(0, 10)}` : '⚖'
+            calcScaleBtn.classList.remove('connecting')
+            calcScaleBtn.classList.add('connected')
+          } else {
+            calcScaleTxt.textContent = '⚖'
+            calcScaleBtn.classList.remove('connecting', 'connected')
+            calcScaleWrap?.classList.add('hidden')
+            if (calcScaleG) calcScaleG.textContent = '—'
+          }
+        }
+      })
+      if (!calcScale.supported) calcScaleBtn.style.opacity = '0.3'
+      calcScaleBtn.addEventListener('click', () => {
+        if (calcScale.state === 'connected') calcScale.disconnect()
+        else if (calcScale.state === 'disconnected') calcScale.connect()
+      })
+    }
 
     // ── Modal ───────────────────────────────────────────────────────────────────
     initModal()
@@ -718,9 +871,11 @@ function _renderCustomTechniques(techniques) {
   createCard.className = 'technique-card technique-card--create'
   createCard.textContent = '+ Создать технику'
   createCard.addEventListener('click', () => {
-    document.getElementById('calc-tech-name').value  = ''
-    document.getElementById('calc-tech-desc').value  = ''
-    document.getElementById('calc-tech-steps').value = ''
+    document.getElementById('calc-tech-name').value = ''
+    document.getElementById('tech-bloom-g').value   = ''
+    document.getElementById('tech-pours-list').innerHTML = ''
+    document.getElementById('tech-error').classList.add('hidden')
+    document.getElementById('tech-total-time').textContent = '—'
     document.getElementById('calc-tech-overlay').classList.add('visible')
     setTimeout(() => document.getElementById('calc-tech-name')?.focus(), 50)
   })

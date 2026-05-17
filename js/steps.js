@@ -1,6 +1,26 @@
 // js/steps.js
 import { formatTime } from './calculator.js'
 
+// ─── Custom Steps Parser ─────────────────────────────────────────────────────
+function _parseCustomSteps(customSteps) {
+  try {
+    const arr = JSON.parse(customSteps)
+    if (Array.isArray(arr)) {
+      return arr.map(s => ({
+        start_sec: s.sec,
+        action: `${s.label}: до ${s.g}г`,
+        note: null,
+      }))
+    }
+  } catch (_) {}
+  // fallback: legacy plain-text format
+  return customSteps.split('\n').filter(l => l.trim()).map((line, i) => ({
+    start_sec: i === 0 ? 0 : null,
+    action: line.trim(),
+    note: null,
+  }))
+}
+
 // ─── Brew Mode Steps ─────────────────────────────────────────────────────────
 // Returns steps with start_sec for brew.html auto-advance.
 // start_sec: null = prep step (shown before countdown)
@@ -15,11 +35,7 @@ export function getBrewSteps(state) {
 
 function _brewV60(coffee_g, water_g, temp_c, brew_time_sec, technique, customSteps) {
   if (technique?.startsWith('custom-') && customSteps) {
-    return customSteps.split('\n').filter(l => l.trim()).map((line, i) => ({
-      start_sec: i === 0 ? 0 : null,
-      action: line.trim(),
-      note: null,
-    }))
+    return _parseCustomSteps(customSteps)
   }
   switch (technique) {
     case '1-pour': return _brewV60OnePour(coffee_g, water_g, temp_c, brew_time_sec)
@@ -88,11 +104,12 @@ function _brewAeropress(coffee_g, water_g, temp_c, style, brew_time_sec) {
     return [
       // Prep before timer — shown on start screen
       { start_sec: null,       action: 'Перевернуть AeroPress поршнем вниз (1 см внутри)', note: null },
-      { start_sec: null,       action: `Засыпать <b>${coffee_g}г</b> кофе (средний помол)`, note: null },
+      { start_sec: null,       action: `Засыпать <b>${coffee_g}г</b> кофе`, note: null },
+      { start_sec: null,       action: 'Установить бумажный фильтр в сито, смочить кипятком', note: null },
       // Timer starts here — water hits coffee
-      { start_sec: 0,          action: `Залить <b>${water_g}г</b> воды (${temp_c}°C), перемешать 10 сек`, note: 'Таймер пошёл — вода в кофе' },
-      { start_sec: 30,         action: `Настаивание — ждать до ${formatTime(filter_sec)}`, note: 'Не перемешивайте' },
-      { start_sec: filter_sec, action: 'Установить фильтр, смочить кипятком', note: null },
+      { start_sec: 0,          action: `Залить <b>30г</b> воды (${temp_c}°C), перемешать 10 сек`, note: 'Таймер пошёл — вода в кофе' },
+      { start_sec: 30,         action: `Долить оставшийся обьем воды до <b>${water_g}г</b>`, note: null },
+      { start_sec: 40,         action: `Настаивание — ждать до ${formatTime(filter_sec)}`, note: 'Не перемешивайте' },
       { start_sec: steep_sec,  action: 'Перевернуть на кружку, медленно давить 30 сек', note: 'Остановитесь на шипении' },
       { start_sec: done_sec,   action: '☕ Готово!', note: null },
     ]
@@ -127,11 +144,7 @@ export function getSteps(state) {
 
 function _v60Steps(coffee_g, water_g, temp_c, brew_time_sec, technique, customSteps) {
   if (technique?.startsWith('custom-') && customSteps) {
-    return customSteps.split('\n').filter(l => l.trim()).map(line => ({
-      time: '—',
-      action: line.trim(),
-      note: null,
-    }))
+    return _parseCustomSteps(customSteps)
   }
   switch (technique) {
     case '1-pour': return _v60OnePour(coffee_g, water_g, temp_c, brew_time_sec)
