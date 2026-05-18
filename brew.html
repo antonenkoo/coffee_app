@@ -171,12 +171,14 @@
     }
 
     /* ── Brew grid ─────────────────────────── */
-    #brew-grid { width: 100%; display: flex; flex-direction: column; gap: 0; }
+    #brew-grid { width: 100%; display: flex; flex-direction: column; gap: 12px; }
 
-    /* Mobile: only timer shown by default; scale blocks appear when connected */
-    .brew-block         { display: none; }
-    #block-timer        { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-    .brew-block-label   { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); }
+    /* Mobile: only timer + fact shown; scale blocks appear when connected */
+    .brew-block          { display: none; }
+    #block-timer         { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    /* Scale blocks become visible on mobile when .active (scale connected + widget on) */
+    .brew-block.active   { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 0; }
+    .brew-block-label    { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); }
 
     .brew-block-val { display: flex; align-items: baseline; gap: 4px; }
     .brew-block-val > span:first-child {
@@ -202,8 +204,8 @@
 
     /* ── Desktop brew layout (≥900px) ──────────────────── */
     @media (min-width: 900px) {
-      #brew-app { padding: 40px 48px; align-items: stretch; }
-      #phase-brew { max-width: 900px; width: 100%; gap: 14px; align-items: stretch; }
+      #brew-app { padding: 40px 48px; }
+      #phase-brew { max-width: 900px; width: 100%; gap: 14px; }
 
       /* 3-row grid: [timer weight] [graph] [flow fact] */
       #brew-grid {
@@ -216,11 +218,11 @@
         gap: 14px;
       }
 
-      #block-timer  { grid-area: timer;  }
-      #block-weight { grid-area: weight; }
-      #block-graph  { grid-area: graph;  }
-      #block-flow   { grid-area: flow;   }
-      #block-fact   { grid-area: fact;   }
+      #block-timer  { grid-area: timer;  display: flex; }
+      #block-weight { grid-area: weight; display: flex; }
+      #block-graph  { grid-area: graph;  display: flex; }
+      #block-flow   { grid-area: flow;   display: flex; }
+      #block-fact   { grid-area: fact;   display: flex; }
 
       /* All blocks visible as cards on desktop */
       .brew-block {
@@ -252,7 +254,6 @@
       #brew-fact-text { font-size: 0.82rem; color: var(--muted); line-height: 1.6; max-width: 220px; }
 
       #scale-live { display: none !important; }
-      #progress-wrap { left: 260px; }
     }
 
     /* ── Done scale summary ── */
@@ -907,17 +908,11 @@ document.getElementById('start-btn').addEventListener('click', () => {
 })
 
 document.getElementById('stop-btn').addEventListener('click', () => {
-  if (brewInterval) clearInterval(brewInterval)
+  // Don't stop the timer before confirming — interval keeps running during dialog
   const ok = confirm(t('brew.stop.confirm'))
-  if (ok) window.location.href = 'index.html'
-  else if (brewInterval !== null) {
-    // resume if cancelled
-    brewInterval = setInterval(() => {
-      elapsed++
-      document.getElementById('brew-timer').textContent = fmt(elapsed)
-      document.getElementById('progress-fill').style.width =
-        `${Math.min(100, (elapsed / brew_time_sec) * 100)}%`
-    }, 1000)
+  if (ok) {
+    clearInterval(brewInterval)
+    window.location.href = 'index.html'
   }
 })
 
@@ -960,7 +955,6 @@ function playAlert() {
 }
 
 // ── BLE Scale ────────────────────────────────────────────────────────────────
-const scaleLive     = document.getElementById('scale-live')
 const scaleLiveG    = document.getElementById('scale-live-g')
 const scaleLiveFlow = document.getElementById('scale-live-flow')
 const scaleBtn      = document.getElementById('scale-btn')
@@ -1008,14 +1002,11 @@ function _applyWidgets() {
   const showGraph  = document.getElementById('w-graph').checked
   const connected  = scale.state === 'connected'
 
-  // Desktop: blocks are always shown as cards, dim/undim scale-dependent ones
+  // .active class: on desktop = full opacity; on mobile = display: flex (via CSS)
   document.getElementById('block-weight').classList.toggle('active', connected && showWeight)
-  document.getElementById('block-flow').classList.toggle('active', connected && showFlow)
-  document.getElementById('block-graph').classList.toggle('active', connected && showGraph)
+  document.getElementById('block-flow').classList.toggle('active',   connected && showFlow)
+  document.getElementById('block-graph').classList.toggle('active',  connected && showGraph)
   weightCanvas.style.display = (connected && showGraph) ? 'block' : 'none'
-
-  // Mobile: show scale-live if scale connected and any stat enabled
-  if (scaleLive) scaleLive.classList.toggle('hidden', !connected || (!showWeight && !showFlow))
 }
 
 // Cumulative weight graph (all points from brew start, never shifted)

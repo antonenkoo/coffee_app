@@ -2322,6 +2322,8 @@ textarea.calc-modal-input { resize: vertical; min-height: 80px; line-height: 1.5
   main {
     grid-area: main;
     max-width: 640px;
+    width: 100%;
+    margin: 0 auto;
     padding: var(--gap-xl) var(--gap-xl) 80px;
   }
 
