@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Рецепт — Coffee Brew</title>
+  <style>
+    :root {
+      --bg:     #0e0e0e;
+      --surface:#171717;
+      --accent: #e8d5b0;
+      --text:   #f5f5f5;
+      --muted:  #888888;
+      --dim:    #444444;
+      --border: rgba(255,255,255,0.07);
+      --radius: 14px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      min-height: 100%; background: var(--bg); color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    }
+    body { padding-bottom: 100px; }
+
+    /* ── Loading / error ── */
+    #loading, #error {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      min-height: 60vh; gap: 12px; color: var(--muted); font-size: 0.9rem; text-align: center;
+      padding: 24px;
+    }
+    #error { display: none; }
+    #error .err-icon { font-size: 2.5rem; margin-bottom: 8px; }
+    #recipe-page { display: none; }
+
+    /* ── Header ── */
+    #rp-header {
+      padding: 32px 20px 0;
+      max-width: 560px; margin: 0 auto;
+    }
+    #rp-method-badge {
+      display: inline-block;
+      font-size: 0.65rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--accent); border: 1px solid rgba(232,213,176,0.3);
+      border-radius: 6px; padding: 3px 8px; margin-bottom: 12px;
+    }
+    #rp-bean {
+      font-size: 1.5rem; font-weight: 700; color: var(--text); line-height: 1.25;
+      margin-bottom: 4px;
+    }
+    #rp-meta {
+      font-size: 0.78rem; color: var(--muted); margin-bottom: 20px;
+    }
+
+    /* ── Params grid ── */
+    .rp-section {
+      max-width: 560px; margin: 0 auto; padding: 0 20px 20px;
+    }
+    .rp-section-title {
+      font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.12em;
+      color: var(--dim); margin-bottom: 10px;
+    }
+    .rp-params {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+    }
+    .rp-param {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 14px 12px; text-align: center;
+    }
+    .rp-param-val {
+      font-size: 1.35rem; font-weight: 700; color: var(--accent);
+      font-variant-numeric: tabular-nums;
+    }
+    .rp-param-label {
+      font-size: 0.65rem; color: var(--muted); text-transform: uppercase;
+      letter-spacing: 0.08em; margin-top: 4px;
+    }
+
+    /* ── Info rows ── */
+    .rp-info-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 0; border-bottom: 1px solid var(--border);
+      font-size: 0.875rem;
+    }
+    .rp-info-row:last-child { border-bottom: none; }
+    .rp-info-icon { font-size: 1rem; width: 20px; text-align: center; flex-shrink: 0; }
+    .rp-info-val { color: var(--text); }
+    .rp-info-sub { font-size: 0.75rem; color: var(--muted); margin-left: auto; }
+
+    /* ── Steps list ── */
+    .rp-steps { display: flex; flex-direction: column; gap: 0; }
+    .rp-step {
+      display: flex; gap: 14px; padding: 12px 0;
+      border-bottom: 1px solid var(--border); align-items: flex-start;
+    }
+    .rp-step:last-child { border-bottom: none; }
+    .rp-step-num {
+      width: 22px; height: 22px; border-radius: 50%;
+      background: rgba(232,213,176,0.1); border: 1px solid rgba(232,213,176,0.25);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.65rem; color: var(--accent); flex-shrink: 0; margin-top: 1px;
+    }
+    .rp-step-body { flex: 1; }
+    .rp-step-time { font-size: 0.68rem; color: var(--dim); margin-bottom: 3px; }
+    .rp-step-action { font-size: 0.875rem; line-height: 1.4; color: var(--text); }
+    .rp-step-action b { color: var(--accent); font-weight: 600; }
+    .rp-step-note { font-size: 0.73rem; color: var(--muted); margin-top: 4px; line-height: 1.35; }
+
+    /* ── Taste ── */
+    .rp-taste-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+    .rp-taste-name { font-size: 0.8rem; color: var(--muted); width: 72px; flex-shrink: 0; }
+    .rp-taste-pips { display: flex; gap: 4px; }
+    .pip {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: rgba(232,213,176,0.15); border: 1px solid rgba(232,213,176,0.2);
+    }
+    .pip.on { background: rgba(232,213,176,0.75); border-color: transparent; }
+
+    /* ── Notes ── */
+    #rp-notes {
+      font-size: 0.85rem; line-height: 1.6; color: var(--muted);
+      border-left: 2px solid rgba(232,213,176,0.2); padding-left: 14px;
+      font-style: italic;
+    }
+
+    /* ── Brew button (bottom fixed) ── */
+    #brew-bar {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      padding: 16px 20px 24px;
+      background: linear-gradient(to top, var(--bg) 60%, transparent);
+      display: flex; justify-content: center; display: none;
+    }
+    #brew-bar.visible { display: flex; }
+    #brew-cta-btn {
+      padding: 12px 32px;
+      background: transparent; border: 1px solid rgba(232,213,176,0.35);
+      border-radius: 28px; color: var(--accent); font-size: 0.875rem;
+      font-family: inherit; cursor: pointer; letter-spacing: 0.04em;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    #brew-cta-btn:hover { background: rgba(232,213,176,0.07); border-color: rgba(232,213,176,0.7); }
+
+    /* ── Mode modal ── */
+    #mode-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65);
+      align-items: flex-end; justify-content: center; z-index: 100;
+    }
+    #mode-overlay.open { display: flex; }
+    #mode-sheet {
+      background: #1a1a1a; border-radius: 20px 20px 0 0; border: 1px solid var(--border);
+      padding: 28px 24px 40px; width: 100%; max-width: 560px;
+      animation: slideUp 0.22s ease;
+    }
+    @keyframes slideUp { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+    #mode-sheet h3 { font-size: 1rem; font-weight: 600; margin-bottom: 6px; }
+    #mode-sheet p  { font-size: 0.8rem; color: var(--muted); margin-bottom: 20px; }
+    .mode-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+    .mode-opt {
+      border: 1px solid var(--border); border-radius: 12px; padding: 16px 12px;
+      background: transparent; color: var(--text); font-family: inherit;
+      cursor: pointer; text-align: left; transition: border-color 0.15s, background 0.15s;
+    }
+    .mode-opt:hover, .mode-opt.selected { border-color: rgba(232,213,176,0.5); background: rgba(232,213,176,0.05); }
+    .mode-opt-title { font-size: 0.875rem; font-weight: 600; margin-bottom: 4px; }
+    .mode-opt-desc  { font-size: 0.72rem; color: var(--muted); line-height: 1.35; }
+    #mode-start-btn {
+      width: 100%; padding: 13px; border-radius: 12px; border: none;
+      background: rgba(232,213,176,0.12); color: var(--accent);
+      font-family: inherit; font-size: 0.9rem; font-weight: 600; cursor: pointer;
+      transition: background 0.15s;
+    }
+    #mode-start-btn:hover { background: rgba(232,213,176,0.2); }
+    #mode-cancel { text-align: center; margin-top: 12px; }
+    #mode-cancel button {
+      background: none; border: none; color: var(--muted); font-size: 0.8rem;
+      cursor: pointer; font-family: inherit;
+    }
+
+    /* ── Brew overlay ── */
+    #brew-overlay {
+      display: none; position: fixed; inset: 0;
+      background: var(--bg); z-index: 200;
+      flex-direction: column; align-items: center; justify-content: center;
+      padding: 24px 20px; gap: 16px;
+    }
+    #brew-overlay.open { display: flex; }
+    #brew-stop-btn {
+      position: absolute; top: 20px; left: 20px;
+      width: 38px; height: 38px; border-radius: 50%;
+      border: 1px solid var(--border); background: transparent;
+      color: var(--muted); font-size: 1rem; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    #brew-stop-btn:hover { border-color: var(--text); color: var(--text); }
+    #brew-phase-label {
+      font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--dim);
+    }
+    #brew-big-timer {
+      font-size: 5.5rem; font-weight: 700; font-variant-numeric: tabular-nums;
+      color: var(--accent); line-height: 1; letter-spacing: -0.02em;
+    }
+    #brew-progress { width: 100%; max-width: 320px; height: 2px; background: rgba(255,255,255,0.06); border-radius: 1px; }
+    #brew-progress-fill { height: 100%; background: rgba(232,213,176,0.4); border-radius: 1px; width: 0; transition: width 0.9s linear; }
+    #brew-current-step {
+      text-align: center; max-width: 360px; line-height: 1.5;
+      font-size: 1rem; color: var(--text);
+    }
+    #brew-current-step b { color: var(--accent); }
+    #brew-current-speed { font-size: 0.75rem; color: var(--accent); opacity: 0.75; margin-top: 4px; }
+    #brew-next-step {
+      text-align: center; max-width: 340px; color: var(--muted); font-size: 0.82rem; line-height: 1.4;
+    }
+    #brew-next-in { font-size: 0.72rem; color: var(--dim); margin-top: 3px; }
+
+    /* Simple timer mode: show full recipe summary */
+    #brew-summary {
+      width: 100%; max-width: 400px;
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 14px 16px; display: none;
+      max-height: 30vh; overflow-y: auto;
+    }
+    .brew-summary-step { font-size: 0.78rem; color: var(--muted); padding: 5px 0; border-bottom: 1px solid var(--border); line-height: 1.4; }
+    .brew-summary-step:last-child { border-bottom: none; }
+    .brew-summary-step b { color: var(--text); }
+
+    /* Done screen */
+    #brew-done {
+      display: none; flex-direction: column; align-items: center; gap: 12px; text-align: center;
+    }
+    #brew-done.visible { display: flex; }
+    #brew-done-icon { font-size: 3.5rem; }
+    #brew-done-title { font-size: 1.5rem; font-weight: 700; }
+    #brew-done-time { font-size: 0.85rem; color: var(--muted); }
+
+    /* Share toast */
+    #share-toast {
+      position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
+      background: #1f1f1f; border: 1px solid var(--border);
+      border-radius: 10px; padding: 10px 18px; font-size: 0.82rem; color: var(--text);
+      opacity: 0; transition: opacity 0.25s; pointer-events: none; white-space: nowrap;
+      z-index: 300;
+    }
+    #share-toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+
+<div id="loading">
+  <div style="font-size:1.8rem">☕</div>
+  <div>Загрузка рецепта…</div>
+</div>
+
+<div id="error">
+  <div class="err-icon">🔍</div>
+  <div style="font-weight:600">Рецепт не найден</div>
+  <div style="font-size:0.8rem;color:#666;margin-top:4px">Ссылка устарела или рецепт был удалён</div>
+</div>
+
+<div id="recipe-page">
+  <div id="rp-header">
+    <div id="rp-method-badge"></div>
+    <div id="rp-bean">Рецепт кофе</div>
+    <div id="rp-meta"></div>
+  </div>
+
+  <div class="rp-section">
+    <div class="rp-params" id="rp-params"></div>
+  </div>
+
+  <div class="rp-section" id="rp-grinder-section" style="display:none">
+    <div class="rp-section-title">Кофемолка</div>
+    <div id="rp-grinder-rows"></div>
+  </div>
+
+  <div class="rp-section" id="rp-steps-section">
+    <div class="rp-section-title">Шаги</div>
+    <div class="rp-steps" id="rp-steps-list"></div>
+  </div>
+
+  <div class="rp-section" id="rp-taste-section" style="display:none">
+    <div class="rp-section-title">Вкусовой профиль</div>
+    <div id="rp-taste-rows"></div>
+  </div>
+
+  <div class="rp-section" id="rp-notes-section" style="display:none">
+    <div class="rp-section-title">Заметки</div>
+    <div id="rp-notes"></div>
+  </div>
+</div>
+
+<!-- Bottom brew CTA -->
+<div id="brew-bar">
+  <button id="brew-cta-btn">Заварить этот рецепт ☕</button>
+</div>
+
+<!-- Mode selection modal -->
+<div id="mode-overlay">
+  <div id="mode-sheet">
+    <h3>Как будешь заваривать?</h3>
+    <p>Выбери режим — можно изменить в любой момент</p>
+    <div class="mode-options">
+      <button class="mode-opt selected" data-mode="steps" onclick="selectMode('steps')">
+        <div class="mode-opt-title">Пошагово</div>
+        <div class="mode-opt-desc">Текущий шаг + следующий. Звуковое предупреждение за 5 сек</div>
+      </button>
+      <button class="mode-opt" data-mode="timer" onclick="selectMode('timer')">
+        <div class="mode-opt-title">Просто таймер</div>
+        <div class="mode-opt-desc">Обратный отсчёт + полное описание рецепта рядом</div>
+      </button>
+    </div>
+    <button id="mode-start-btn" onclick="startBrew()">▶&nbsp;&nbsp;Начать</button>
+    <div id="mode-cancel"><button onclick="closeModal()">Отмена</button></div>
+  </div>
+</div>
+
+<!-- Brew overlay -->
+<div id="brew-overlay">
+  <button id="brew-stop-btn" onclick="stopBrew()">✕</button>
+
+  <div id="brew-active">
+    <div style="text-align:center;display:flex;flex-direction:column;align-items:center;gap:14px;width:100%;max-width:400px">
+      <div id="brew-phase-label">Заваривание</div>
+      <div id="brew-big-timer">0:00</div>
+      <div id="brew-progress"><div id="brew-progress-fill"></div></div>
+      <div id="brew-current-step"></div>
+      <div id="brew-current-speed"></div>
+      <div id="brew-next-step"></div>
+      <div id="brew-next-in"></div>
+      <div id="brew-summary"></div>
+    </div>
+  </div>
+
+  <div id="brew-done">
+    <div id="brew-done-icon">☕</div>
+    <div id="brew-done-title">Готово!</div>
+    <div id="brew-done-time"></div>
+    <button onclick="stopBrew()" style="margin-top:8px;padding:10px 28px;background:transparent;border:1px solid var(--border);border-radius:20px;color:var(--muted);font-family:inherit;font-size:0.85rem;cursor:pointer;">Закрыть</button>
+  </div>
+</div>
+
+<div id="share-toast">Ссылка скопирована!</div>
+
+<script type="module">
+import { initializeApp }      from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js'
+import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js'
+import { getBrewSteps, getSteps } from './js/steps.js'
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAw006u4u9_LQ0uCFTaOEzBQ6_4X2eKCCg",
+  authDomain: "coffeebrewapp-89b29.firebaseapp.com",
+  projectId: "coffeebrewapp-89b29",
+  storageBucket: "coffeebrewapp-89b29.firebasestorage.app",
+  messagingSenderId: "521415953655",
+  appId: "1:521415953655:web:e8f2d871cb6b18ca4dd7f2"
+}
+const app = initializeApp(firebaseConfig)
+const db  = getFirestore(app)
+
+const METHOD_NAMES = { v60: 'V60', aeropress: 'AeroPress', filter: 'Filter' }
+const TASTE_LABELS = { acidity: 'Кислотность', sweetness: 'Сладость', body: 'Тело', bitterness: 'Горечь', clarity: 'Чистота' }
+const TECH_NAMES   = { '3-pour': '3 пролива', '1-pour': '1 пролив', '46': 'Метод 4:6' }
+
+// ── Load recipe ───────────────────────────────────────────────────────────────
+const id = new URLSearchParams(location.search).get('id')
+if (!id) { showError(); }
+
+let recipe = null
+let brewSteps = []   // getBrewSteps timer steps (with start_sec)
+let uiSteps   = []   // getSteps UI steps (for simple timer mode summary)
+let timerSteps = []  // filtered brew steps with start_sec !== null
+
+async function loadRecipe() {
+  if (!id) return
+  try {
+    // Try public feed first
+    let snap = await getDoc(doc(db, 'recipes', id))
+    if (!snap.exists()) snap = await getDoc(doc(db, 'shared_recipes', id))
+    if (!snap.exists()) { showError(); return }
+
+    recipe = { id: snap.id, ...snap.data() }
+    renderRecipe(recipe)
+  } catch (e) {
+    console.error(e)
+    showError()
+  }
+}
+
+function showError() {
+  document.getElementById('loading').style.display = 'none'
+  document.getElementById('error').style.display = 'flex'
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function renderRecipe(r) {
+  const state = {
+    method:             r.method || 'v60',
+    coffee_g:           r.coffee_g || 15,
+    water_g:            r.water_g  || 250,
+    temp_c:             r.temp_c   || 93,
+    ratio:              r.ratio    || 16.67,
+    brew_time_sec:      r.brew_time_sec || 180,
+    aeropress_style:    r.aeropress_style || 'inverted',
+    pour_technique:     r.technique || null,
+    grind_manual_microns: r.grind_microns || null,
+  }
+
+  brewSteps  = getBrewSteps(state)
+  uiSteps    = getSteps(state)
+  timerSteps = brewSteps.filter(s => s.start_sec !== null)
+
+  // Method badge
+  document.getElementById('rp-method-badge').textContent =
+    METHOD_NAMES[r.method] ?? r.method ?? 'Recipe'
+
+  // Title
+  if (r.bean) document.getElementById('rp-bean').textContent = r.bean
+  else document.getElementById('rp-bean').textContent = `${METHOD_NAMES[r.method] ?? ''} Recipe`
+
+  // Meta
+  const author = r.userNickname || (r.userEmail ? r.userEmail.split('@')[0] : null)
+  const meta = []
+  if (author) meta.push(`от ${author}`)
+  if (r.createdAt) {
+    const d = r.createdAt.toDate ? r.createdAt.toDate() : new Date(r.createdAt)
+    meta.push(d.toLocaleDateString('ru', { day: 'numeric', month: 'long', year: 'numeric' }))
+  }
+  if (r.technique && TECH_NAMES[r.technique]) meta.push(TECH_NAMES[r.technique])
+  document.getElementById('rp-meta').textContent = meta.join(' · ')
+
+  // Params
+  const params = [
+    { val: `${r.coffee_g}г`,  label: 'Кофе' },
+    { val: `${r.water_g}мл`,  label: 'Вода' },
+    { val: `1:${(+r.ratio).toFixed(1)}`, label: 'Ratio' },
+    r.method !== 'filter' ? { val: `${r.temp_c}°C`, label: 'Температура' } : null,
+    { val: fmt(r.brew_time_sec), label: 'Время' },
+    r.grind_microns ? { val: `${r.grind_microns}мкм`, label: 'Помол' } : null,
+  ].filter(Boolean)
+
+  document.getElementById('rp-params').innerHTML = params.map(p =>
+    `<div class="rp-param">
+      <div class="rp-param-val">${p.val}</div>
+      <div class="rp-param-label">${p.label}</div>
+    </div>`
+  ).join('')
+
+  // Grinder
+  const grinderParts = [r.grinder_name, r.grind_clicks ? `${r.grind_clicks} кликов` : null].filter(Boolean)
+  if (grinderParts.length) {
+    document.getElementById('rp-grinder-section').style.display = ''
+    document.getElementById('rp-grinder-rows').innerHTML = `
+      <div class="rp-info-row">
+        <span class="rp-info-icon">⚙</span>
+        <span class="rp-info-val">${grinderParts.join(' — ')}</span>
+        ${r.grind_microns ? `<span class="rp-info-sub">${r.grind_microns} мкм</span>` : ''}
+      </div>`
+  }
+
+  // Steps (UI display version)
+  const stepItems = uiSteps.filter(s => s.time !== '—' || s.action)
+  document.getElementById('rp-steps-list').innerHTML = stepItems.map((s, i) => `
+    <div class="rp-step">
+      <div class="rp-step-num">${i + 1}</div>
+      <div class="rp-step-body">
+        ${s.time && s.time !== '—' ? `<div class="rp-step-time">${s.time}</div>` : ''}
+        <div class="rp-step-action">${s.action}</div>
+        ${s.note ? `<div class="rp-step-note">${s.note}</div>` : ''}
+      </div>
+    </div>`
+  ).join('')
+
+  // Taste
+  const taste = r.taste
+  if (taste && Object.values(taste).some(v => v > 0)) {
+    document.getElementById('rp-taste-section').style.display = ''
+    document.getElementById('rp-taste-rows').innerHTML =
+      Object.entries(taste).filter(([, v]) => v > 0).map(([k, v]) => `
+        <div class="rp-taste-row">
+          <span class="rp-taste-name">${TASTE_LABELS[k] ?? k}</span>
+          <div class="rp-taste-pips">
+            ${Array.from({length: 5}, (_, i) => `<div class="pip${i < v ? ' on' : ''}"></div>`).join('')}
+          </div>
+        </div>`
+      ).join('')
+  }
+
+  // Notes
+  if (r.notes) {
+    document.getElementById('rp-notes-section').style.display = ''
+    document.getElementById('rp-notes').textContent = r.notes
+  }
+
+  // Show page
+  document.getElementById('loading').style.display = 'none'
+  document.getElementById('recipe-page').style.display = 'block'
+  document.getElementById('brew-bar').classList.add('visible')
+}
+
+function fmt(sec) {
+  const m = Math.floor(Math.abs(sec) / 60), s = Math.abs(sec) % 60
+  return `${m}:${String(s).padStart(2, '0')}`
+}
+
+// ── Brew mode ─────────────────────────────────────────────────────────────────
+let chosenMode = 'steps'
+
+window.selectMode = (mode) => {
+  chosenMode = mode
+  document.querySelectorAll('.mode-opt').forEach(el =>
+    el.classList.toggle('selected', el.dataset.mode === mode)
+  )
+}
+
+window.closeModal = () => {
+  document.getElementById('mode-overlay').classList.remove('open')
+}
+
+document.getElementById('brew-cta-btn').addEventListener('click', () => {
+  document.getElementById('mode-overlay').classList.add('open')
+})
+
+// ── Brew timer ────────────────────────────────────────────────────────────────
+let _audioCtx = null
+let _interval = null
+let _elapsed  = 0
+let _curIdx   = 0
+let _voiceAlertSent = -1
+
+function playBeep(freq = 880, dur = 0.25) {
+  try {
+    if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)()
+    const osc = _audioCtx.createOscillator()
+    const gain = _audioCtx.createGain()
+    osc.connect(gain); gain.connect(_audioCtx.destination)
+    osc.frequency.value = freq; osc.type = 'sine'
+    gain.gain.setValueAtTime(0.3, _audioCtx.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.001, _audioCtx.currentTime + dur)
+    osc.start(_audioCtx.currentTime); osc.stop(_audioCtx.currentTime + dur)
+  } catch (_) {}
+}
+
+function playAlert() {
+  playBeep(660, 0.18)
+  setTimeout(() => playBeep(660, 0.18), 250)
+  setTimeout(() => playBeep(880, 0.3), 500)
+}
+
+function getStepIdx(sec) {
+  let idx = 0
+  for (let i = 0; i < timerSteps.length; i++) {
+    if (timerSteps[i].start_sec <= sec) idx = i
+    else break
+  }
+  return idx
+}
+
+window.startBrew = () => {
+  closeModal()
+  _audioCtx = new (window.AudioContext || window.webkitAudioContext)()
+  _elapsed  = 0; _curIdx = 0; _voiceAlertSent = -1
+
+  const overlay  = document.getElementById('brew-overlay')
+  const timerEl  = document.getElementById('brew-big-timer')
+  const progFill = document.getElementById('brew-progress-fill')
+  const currEl   = document.getElementById('brew-current-step')
+  const speedEl  = document.getElementById('brew-current-speed')
+  const nextEl   = document.getElementById('brew-next-step')
+  const nextIn   = document.getElementById('brew-next-in')
+  const summary  = document.getElementById('brew-summary')
+  const brewTime = recipe.brew_time_sec || 180
+
+  document.getElementById('brew-active').style.display = ''
+  document.getElementById('brew-done').classList.remove('visible')
+  overlay.classList.add('open')
+
+  if (chosenMode === 'timer') {
+    // Simple timer: show full recipe as static list
+    currEl.style.display = 'none'
+    speedEl.style.display = 'none'
+    nextEl.style.display  = 'none'
+    nextIn.style.display  = 'none'
+    summary.style.display = 'block'
+    summary.innerHTML = uiSteps.filter(s => s.time && s.time !== '—').map(s =>
+      `<div class="brew-summary-step"><b>${s.time}</b> — ${s.action}</div>`
+    ).join('')
+  } else {
+    // Step-by-step mode
+    currEl.style.display  = ''
+    speedEl.style.display = ''
+    nextEl.style.display  = ''
+    nextIn.style.display  = ''
+    summary.style.display = 'none'
+    updateBrewStep(0)
+  }
+
+  _interval = setInterval(() => {
+    _elapsed++
+    timerEl.textContent = fmt(_elapsed)
+    progFill.style.width = `${Math.min(100, (_elapsed / brewTime) * 100)}%`
+
+    if (chosenMode === 'steps' && timerSteps.length > 0) {
+      const newIdx = getStepIdx(_elapsed)
+      if (newIdx !== _curIdx) {
+        _curIdx = newIdx
+        updateBrewStep(newIdx)
+        playBeep(); try { navigator.vibrate?.([200, 100, 200]) } catch (_) {}
+        if (newIdx === timerSteps.length - 1) {
+          clearInterval(_interval)
+          setTimeout(showBrewDone, 3000)
+          return
+        }
+      }
+      const next = timerSteps[_curIdx + 1]
+      if (next) {
+        const rem = next.start_sec - _elapsed
+        nextIn.textContent = rem > 0 ? `через ${fmt(rem)}` : 'сейчас!'
+        if (rem === 5 && _voiceAlertSent !== _curIdx + 1) {
+          _voiceAlertSent = _curIdx + 1
+          playAlert()
+        }
+      } else {
+        nextIn.textContent = ''
+      }
+    } else if (chosenMode === 'timer' && _elapsed >= brewTime) {
+      clearInterval(_interval)
+      showBrewDone()
+    }
+  }, 1000)
+}
+
+function updateBrewStep(idx) {
+  const step = timerSteps[idx]
+  const next = timerSteps[idx + 1]
+  document.getElementById('brew-current-step').innerHTML = step.action
+  const speedEl = document.getElementById('brew-current-speed')
+  if (step.speed_gs) {
+    const dur = next ? next.start_sec - step.start_sec : null
+    speedEl.textContent = `⚡ ${step.speed_gs} г/с${dur ? ` (~${dur}с)` : ''}`
+  } else {
+    speedEl.textContent = ''
+  }
+  if (next) {
+    document.getElementById('brew-next-step').innerHTML = `Следующий: ${next.action}`
+  } else {
+    document.getElementById('brew-next-step').textContent = ''
+  }
+}
+
+function showBrewDone() {
+  clearInterval(_interval)
+  document.getElementById('brew-active').style.display = 'none'
+  document.getElementById('brew-done').classList.add('visible')
+  document.getElementById('brew-done-time').textContent = `Время заваривания: ${fmt(_elapsed)}`
+  playBeep(523, 0.18)
+  setTimeout(() => playBeep(659, 0.18), 220)
+  setTimeout(() => playBeep(784, 0.35), 440)
+}
+
+window.stopBrew = () => {
+  clearInterval(_interval)
+  document.getElementById('brew-overlay').classList.remove('open')
+}
+
+// ── Share button ──────────────────────────────────────────────────────────────
+document.getElementById('brew-cta-btn').insertAdjacentHTML('afterend',
+  `<button id="share-btn" title="Скопировать ссылку" style="
+    position:fixed;top:20px;right:20px;
+    width:38px;height:38px;border-radius:50%;
+    border:1px solid var(--border);background:transparent;
+    color:var(--muted);font-size:1rem;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;z-index:10;
+  ">⎘</button>`
+)
+
+document.getElementById('share-btn').addEventListener('click', () => {
+  navigator.clipboard.writeText(location.href).then(() => {
+    const t = document.getElementById('share-toast')
+    t.classList.add('show')
+    setTimeout(() => t.classList.remove('show'), 2200)
+  })
+})
+
+loadRecipe()
+</script>
+</body>
+</html>

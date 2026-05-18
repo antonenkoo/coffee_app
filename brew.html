@@ -99,6 +99,25 @@
     }
     #scale-btn.connected #scale-dot { display: block; }
 
+    /* ── Tare button (visible only when scale connected) ── */
+    #tare-btn {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 18px;
+      background: transparent;
+      border: 1px solid rgba(232,213,176,0.3);
+      border-radius: 20px;
+      color: var(--accent);
+      font-size: 0.82rem;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+      user-select: none;
+    }
+    #tare-btn:hover { background: rgba(232,213,176,0.08); border-color: rgba(232,213,176,0.6); }
+    #tare-btn.visible { display: inline-flex; }
+
     /* ── Scale widget picker (shown after connect) ── */
     #scale-widgets {
       display: none;
@@ -159,6 +178,29 @@
     .scale-stat-unit {
       font-size: 1.1rem;
       color: var(--muted);
+    }
+
+    /* ── Recipe profile chart (always visible in brew phase) ── */
+    #recipe-chart-wrap {
+      width: 100%;
+      position: relative;
+    }
+    #recipe-chart {
+      width: 100%;
+      height: 72px;
+      border-radius: 10px;
+      display: block;
+      opacity: 0.9;
+    }
+
+    /* ── Pour speed hint ── */
+    #current-speed {
+      font-size: 0.75rem;
+      color: var(--accent);
+      opacity: 0.75;
+      margin-top: 4px;
+      letter-spacing: 0.03em;
+      min-height: 1.1em;
     }
 
     /* ── Weight graph (brew + done phases) ── */
@@ -563,10 +605,13 @@
       <button id="voice-test-btn" title="Проверить звук" style="flex-shrink:0;padding:4px 8px;background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--muted);font-size:0.8rem;cursor:pointer;">▶</button>
     </div>
     <button id="start-btn" data-i18n="brew.start.btn">▶&nbsp;&nbsp;Начать заваривание</button>
-    <button id="scale-btn" title="Подключить весы">
-      <span id="scale-dot"></span>
-      <span id="scale-btn-text">⚖&nbsp;&nbsp;Подключить весы</span>
-    </button>
+    <div style="display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;">
+      <button id="scale-btn" title="Подключить весы">
+        <span id="scale-dot"></span>
+        <span id="scale-btn-text">⚖&nbsp;&nbsp;Подключить весы</span>
+      </button>
+      <button id="tare-btn" title="Тарировать весы">↺&nbsp;&nbsp;Tare</button>
+    </div>
     <div id="scale-widgets">
       <label class="widget-row">
         <input type="checkbox" id="w-weight" checked>
@@ -591,6 +636,11 @@
   <!-- ── BREW PHASE ──────────────────────────── -->
   <div id="phase-brew" class="phase hidden">
     <div id="progress-wrap"><div id="progress-fill"></div></div>
+
+    <!-- Recipe profile chart (always visible) -->
+    <div id="recipe-chart-wrap">
+      <canvas id="recipe-chart" width="640" height="144"></canvas>
+    </div>
 
     <!-- 4-block grid: Timer+Weight / Graph / Flow+Fact -->
     <div id="brew-grid">
@@ -619,6 +669,7 @@
       <div id="current-label" data-i18n="brew.current.label">Текущий шаг</div>
       <div id="current-action"></div>
       <div id="current-note"></div>
+      <div id="current-speed"></div>
     </div>
     <div id="next-step-wrap">
       <div id="next-label" data-i18n="brew.next.label">Следующий</div>
@@ -789,6 +840,15 @@ function updateStepUI(idx) {
   noteEl.textContent = step.note ?? ''
   noteEl.style.display = step.note ? '' : 'none'
 
+  const speedEl = document.getElementById('current-speed')
+  if (step.speed_gs) {
+    const dur = next ? next.start_sec - step.start_sec : null
+    const durTxt = dur ? ` (~${dur}с)` : ''
+    speedEl.textContent = `⚡ ${step.speed_gs} г/с${durTxt}`
+  } else {
+    speedEl.textContent = ''
+  }
+
   const nextWrap = document.getElementById('next-step-wrap')
   if (next) {
     document.getElementById('next-action').innerHTML = next.action
@@ -807,6 +867,9 @@ function startBrew() {
   document.getElementById('brew-fact-text').textContent =
     _FACTS[Math.floor(Math.random() * _FACTS.length)]
 
+  // Draw initial recipe profile chart
+  _drawRecipeChart()
+
   if (isSimpleMode) {
     document.getElementById('current-step-wrap').style.display = 'none'
     document.getElementById('next-step-wrap').style.display    = 'none'
@@ -823,10 +886,11 @@ function startBrew() {
   brewInterval = setInterval(() => {
     elapsed++
 
-    // Timer + progress
+    // Timer + progress + recipe chart
     document.getElementById('brew-timer').textContent = fmt(elapsed)
     document.getElementById('progress-fill').style.width =
       `${Math.min(100, (elapsed / brew_time_sec) * 100)}%`
+    _drawRecipeChart()
 
     // Step advance
     const newIdx = getCurrentIdx(elapsed)
@@ -960,6 +1024,7 @@ const scaleLiveFlow = document.getElementById('scale-live-flow')
 const scaleBtn      = document.getElementById('scale-btn')
 const scaleBtnTx    = document.getElementById('scale-btn-text')
 const scaleWidgets  = document.getElementById('scale-widgets')
+const tareBtn       = document.getElementById('tare-btn')
 const weightCanvas  = document.getElementById('weight-graph')
 
 // Widget preference helpers
@@ -1012,6 +1077,91 @@ function _applyWidgets() {
 // Cumulative weight graph (all points from brew start, never shifted)
 const _graphPts = []  // { w, t } — weight + elapsed seconds
 
+// Shared coord helpers for all charts
+function _chartCoords(canvas, maxT, maxW) {
+  const W = canvas.width, H = canvas.height
+  const pad = { t: H * 0.08, b: H * 0.08 }
+  const innerH = H - pad.t - pad.b
+  return {
+    W, H,
+    px: (t, w) => ({
+      x: (t / maxT) * W,
+      y: pad.t + innerH - (Math.min(w, maxW * 1.05) / (maxW * 1.1)) * innerH
+    })
+  }
+}
+
+// Always-visible recipe profile chart (+ BLE overlay when connected)
+function _drawRecipeChart() {
+  const canvas = document.getElementById('recipe-chart')
+  if (!canvas) return
+  const ctx = canvas.getContext('2d')
+  const maxT = brew_time_sec || 1
+  const maxW = (water_g || 1) * 1.05
+  const { W, H, px } = _chartCoords(canvas, maxT, maxW)
+
+  ctx.clearRect(0, 0, W, H)
+
+  // Profile points from timer steps
+  const profile = timerSteps.filter(s => s.target_g != null)
+
+  // 1. Dashed profile line
+  if (profile.length >= 2) {
+    ctx.beginPath()
+    ctx.setLineDash([4, 5])
+    profile.forEach((s, i) => {
+      const {x, y} = px(s.start_sec, s.target_g)
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)
+    })
+    ctx.strokeStyle = 'rgba(232,213,176,0.28)'
+    ctx.lineWidth = 1.5
+    ctx.stroke()
+    ctx.setLineDash([])
+
+    // Profile dots
+    profile.forEach(s => {
+      const {x, y} = px(s.start_sec, s.target_g)
+      ctx.beginPath()
+      ctx.arc(x, y, 3.5, 0, Math.PI * 2)
+      ctx.fillStyle = 'rgba(232,213,176,0.55)'
+      ctx.fill()
+    })
+  }
+
+  // 2. BLE live data (fill + line)
+  if (_graphPts.length >= 2) {
+    ctx.beginPath()
+    _graphPts.forEach((p, i) => {
+      const {x, y} = px(p.t, p.w)
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)
+    })
+    const {x: lx} = px(_graphPts[_graphPts.length - 1].t, 0)
+    ctx.lineTo(lx, H); ctx.lineTo(0, H); ctx.closePath()
+    ctx.fillStyle = 'rgba(232,213,176,0.07)'
+    ctx.fill()
+
+    ctx.beginPath()
+    _graphPts.forEach((p, i) => {
+      const {x, y} = px(p.t, p.w)
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)
+    })
+    ctx.strokeStyle = 'rgba(232,213,176,0.85)'
+    ctx.lineWidth = 2; ctx.lineJoin = 'round'
+    ctx.stroke()
+  }
+
+  // 3. Current time marker
+  if (elapsed > 0) {
+    const {x} = px(elapsed, 0)
+    ctx.beginPath()
+    ctx.moveTo(x, 0); ctx.lineTo(x, H)
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)'
+    ctx.lineWidth = 1; ctx.setLineDash([])
+    ctx.stroke()
+  }
+}
+
+// BLE-only weight graph (widget in block-graph)
 function _drawGraphOn(canvas) {
   if (_graphPts.length < 2) return
   const c = canvas, ctx = c.getContext('2d')
@@ -1019,7 +1169,6 @@ function _drawGraphOn(canvas) {
   ctx.clearRect(0, 0, W, H)
   const maxW = Math.max(..._graphPts.map(p => p.w), 1)
   const maxT = _graphPts[_graphPts.length - 1].t || 1
-  // fill under line
   ctx.beginPath()
   _graphPts.forEach((p, i) => {
     const x = (p.t / maxT) * W
@@ -1027,17 +1176,14 @@ function _drawGraphOn(canvas) {
     i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)
   })
   ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath()
-  ctx.fillStyle = 'rgba(232,213,176,0.08)'
-  ctx.fill()
-  // line
+  ctx.fillStyle = 'rgba(232,213,176,0.08)'; ctx.fill()
   ctx.beginPath()
   _graphPts.forEach((p, i) => {
     const x = (p.t / maxT) * W
     const y = H - (p.w / maxW) * H * 0.85 - H * 0.05
     i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)
   })
-  ctx.strokeStyle = 'rgba(232,213,176,0.8)'
-  ctx.lineWidth = 2; ctx.lineJoin = 'round'
+  ctx.strokeStyle = 'rgba(232,213,176,0.8)'; ctx.lineWidth = 2; ctx.lineJoin = 'round'
   ctx.stroke()
 }
 
@@ -1075,10 +1221,12 @@ const scale = new BLEScale({
     } else if (state === 'connected') {
       scaleBtnTx.innerHTML = name ? `⚖&nbsp;&nbsp;${name}` : '⚖&nbsp;&nbsp;Весы подключены'
       scaleWidgets.classList.add('visible')
+      tareBtn.classList.add('visible')
       _applyWidgets()
     } else {
       scaleBtnTx.innerHTML = '⚖&nbsp;&nbsp;Подключить весы'
       scaleWidgets.classList.remove('visible')
+      tareBtn.classList.remove('visible')
       scaleLiveG.textContent = '—'
       scaleLiveFlow.textContent = '—'
       weightCanvas.style.display = 'none'
@@ -1099,6 +1247,8 @@ scaleBtn.addEventListener('click', () => {
   if (scale.state === 'connected') scale.disconnect()
   else if (scale.state === 'disconnected') scale.connect()
 })
+
+tareBtn.addEventListener('click', () => scale.tare())
 
 // ── Voice test button ────────────────────────────────────────────────────────
 document.getElementById('voice-test-btn').addEventListener('click', async () => {

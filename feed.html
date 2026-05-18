@@ -159,8 +159,15 @@
       ${tasteHtml}
       ${r.notes   ? `<div class="recipe-notes">${r.notes}</div>` : ''}
       <div class="recipe-card-footer">
+        <button class="btn-share" data-id="${r.id}" title="Скопировать ссылку">⎘</button>
         <button class="btn-load">${t('feed.load.btn')}</button>
       </div>`
+
+    card.querySelector('.btn-share').addEventListener('click', e => {
+      const recipeId = e.currentTarget.dataset.id
+      const url = `${location.origin}/recipe.html?id=${recipeId}`
+      navigator.clipboard.writeText(url).then(() => showToast('Ссылка скопирована!'))
+    })
 
     card.querySelector('.btn-load').addEventListener('click', () => {
       sessionStorage.setItem('externalRecipe', JSON.stringify({
@@ -215,6 +222,18 @@
 
   loadPage()
   loadMoreBtn.addEventListener('click', loadPage)
+
+  // ── Share toast ────────────────────────────────────────────────────────────
+  const _toastEl = document.createElement('div')
+  _toastEl.id = 'share-toast'
+  _toastEl.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1f1f1f;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px 18px;font-size:0.82rem;color:#f5f5f5;opacity:0;transition:opacity 0.25s;pointer-events:none;white-space:nowrap;z-index:300'
+  document.body.appendChild(_toastEl)
+
+  function showToast(msg) {
+    _toastEl.textContent = msg
+    _toastEl.style.opacity = '1'
+    setTimeout(() => { _toastEl.style.opacity = '0' }, 2200)
+  }
   </script>
 </body>
 </html>

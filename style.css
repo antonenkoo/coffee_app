@@ -1422,6 +1422,20 @@ main {
 }
 .btn-load:hover { background: var(--accent); color: var(--bg); }
 
+.btn-share {
+  padding: 7px 12px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-s);
+  color: var(--text-muted, var(--text-dim));
+  font-size: 0.85rem;
+  cursor: pointer;
+  font-family: inherit;
+  margin-right: auto;
+  transition: border-color 0.15s, color 0.15s;
+}
+.btn-share:hover { border-color: var(--accent); color: var(--accent); }
+
 .btn-delete {
   padding: 7px 12px;
   background: transparent;

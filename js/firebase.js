@@ -129,6 +129,46 @@ export async function updateMyRecipe(recipeId, data) {
   return updateDoc(doc(db, 'users', user.uid, 'recipes', recipeId), data);
 }
 
+// ─── Firestore: public shareable recipes ─────────────────────────────────────
+
+/**
+ * Fetch a single public recipe by ID.
+ * Tries `recipes` (public feed) first, then `shared_recipes`.
+ * No auth required — both collections are publicly readable.
+ */
+export async function getPublicRecipe(id) {
+  try {
+    const feedSnap = await getDoc(doc(db, 'recipes', id));
+    if (feedSnap.exists()) return { id: feedSnap.id, ...feedSnap.data(), _src: 'feed' };
+  } catch (_) {}
+  const sharedSnap = await getDoc(doc(db, 'shared_recipes', id));
+  if (sharedSnap.exists()) return { id: sharedSnap.id, ...sharedSnap.data(), _src: 'shared' };
+  return null;
+}
+
+/**
+ * Share a private recipe as a public link without publishing to the feed.
+ * Copies recipe to `shared_recipes` collection (public read, auth write).
+ * If recipe already has a shareId, returns existing URL without creating duplicate.
+ */
+export async function shareAsPublicLink(recipeId, recipeData) {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Необходимо войти');
+
+  if (recipeData.shareId) {
+    return `${location.origin}/recipe.html?id=${recipeData.shareId}`;
+  }
+
+  const ref = await addDoc(collection(db, 'shared_recipes'), {
+    ...recipeData,
+    uid: user.uid,
+    sharedAt: serverTimestamp(),
+  });
+
+  await updateDoc(doc(db, 'users', user.uid, 'recipes', recipeId), { shareId: ref.id });
+  return `${location.origin}/recipe.html?id=${ref.id}`;
+}
+
 // ─── Firestore: custom techniques ────────────────────────────────────────────
 
 /** Save a custom pour technique. */
