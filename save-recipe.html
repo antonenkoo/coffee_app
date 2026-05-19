@@ -2,6 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
+  <link rel="icon" href="favicon.png" type="image/png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Записать рецепт</title>
   <style>
@@ -347,7 +348,11 @@
     </div>
     <div class="form-row" id="f-method-row">
       <span class="form-label" data-i18n="save.label.method">Метод</span>
-      <span id="f-method-display" style="color:var(--muted);font-size:0.875rem;"></span>
+      <select id="f-method-select" class="form-input">
+        <option value="v60">V60</option>
+        <option value="aeropress">AeroPress</option>
+        <option value="filter">Filter / Drip</option>
+      </select>
     </div>
     <div class="form-row" id="f-technique-row" style="display:none">
       <span class="form-label">Техника</span>
@@ -443,10 +448,11 @@ const brewData = JSON.parse(sessionStorage.getItem('brewState') || 'null')
 if (!brewData) { window.location.href = 'index.html' }
 
 const {
-  method, coffee_g, water_g, temp_c, brew_time_sec,
+  method, coffee_g, water_g, ratio, temp_c, brew_time_sec,
   actual_brew_time_sec, grind_manual_microns,
   pour_technique, customTechniqueSteps,
   scale_final_weight, scale_avg_flow,
+  brewSteps, actualPours,
 } = brewData
 
 const isSimpleMode = brewData.mode === 'simple'
@@ -470,11 +476,9 @@ function parseFmt(str) {
   return (parseInt(parts[0]) || 0) * 60 + (parseInt(parts[1]) || 0)
 }
 
-const METHOD_NAMES = { v60: 'V60', aeropress: 'AeroPress', filter: 'Filter (Bravilor ISO)', simple: 'Простой режим' }
-
 // ── Pre-fill form ─────────────────────────────────────────────────────────────
 document.getElementById('f-time').value = fmt(actual_brew_time_sec ?? brew_time_sec)
-document.getElementById('f-method-display').textContent = METHOD_NAMES[method] ?? method
+document.getElementById('f-method-select').value = method ?? 'v60'
 
 if (isSimpleMode) {
   // In simple mode hide all recipe-specific fields
@@ -562,7 +566,7 @@ document.getElementById('save-recipe-btn').addEventListener('click', async () =>
   const grinderName = GRINDERS.find(g => g.id === grinderVal)?.name ?? null
 
   _savedRecipeData = {
-    method,
+    method: document.getElementById('f-method-select').value,
     coffee_g:    isSimpleMode ? null : (parseFloat(document.getElementById('f-coffee').value) || coffee_g),
     water_g:     isSimpleMode ? null : (parseFloat(document.getElementById('f-water').value)  || water_g),
     temp_c:      isSimpleMode ? null : (method === 'filter' ? 93 : (parseFloat(document.getElementById('f-temp').value) || temp_c)),
@@ -578,6 +582,9 @@ document.getElementById('save-recipe-btn').addEventListener('click', async () =>
     customTechniqueSteps: customTechniqueSteps || null,
     scale_final_weight: scale_final_weight ?? null,
     scale_avg_flow:     scale_avg_flow     ?? null,
+    ratio:              ratio              ?? null,
+    brewSteps:          brewSteps          ?? null,
+    actualPours:        actualPours        ?? null,
   }
 
   const btn = document.getElementById('save-recipe-btn')

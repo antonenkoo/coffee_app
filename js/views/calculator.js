@@ -8,7 +8,7 @@ import {
   renderAll, renderDynamic, renderParams, renderMethodUI,
   renderTemplateOptions, renderTemplateDescription, renderTechniques,
   renderTemplateSuggestion, hideTemplateSuggestion, getPendingSuggestion,
-  getMethodData,
+  getMethodData, setUserRecipes, setExternalSteps,
 } from '../ui.js'
 import { openRatioModal, initModal } from '../modal.js'
 import { V60 }       from '../../data/v60.js'
@@ -17,7 +17,7 @@ import { FILTER }    from '../../data/filter.js'
 import { findMatchingRecipe, getRecipeById } from '../RecipeService.js'
 import { checkIsPossible, calcFilterBrewTime } from '../CalculationEngine.js'
 import { getBrewSteps } from '../steps.js'
-import { auth, saveMyRecipe } from '../firebase.js'
+import { auth, saveMyRecipe, loadMyRecipes } from '../firebase.js'
 import { isGuest, showAuthOverlay } from '../auth-manager.js'
 import { t } from '../i18n.js'
 import { BLEScale } from '../scale.js'
@@ -25,6 +25,7 @@ import { BLEScale } from '../scale.js'
 let _ratioLocked = false
 let _ratioModalOpen = false
 let _dismissedSuggestionId = null
+let _userRecipes = []   // loaded from Firestore on init
 
 export const calculatorView = {
   getHTML() {
@@ -299,6 +300,7 @@ export const calculatorView = {
         }
         _dismissedSuggestionId = null
         hideTemplateSuggestion()
+        setExternalSteps(null)   // clear saved steps when switching method
         renderAll()
       })
     })
@@ -327,11 +329,21 @@ export const calculatorView = {
       const id = e.target.value
       if (!id) {
         setState({ template: null, templateOrigin: null })
+        setExternalSteps(null)
         renderTemplateDescription(null)
         renderTechniques()
         renderDynamic()
         return
       }
+      if (id.startsWith('user:')) {
+        const r = _userRecipes.find(r => r.id === id.slice(5))
+        if (r) {
+          setExternalSteps({ brewSteps: r.brewSteps ?? null, actualPours: r.actualPours ?? null })
+          _applyTemplate({ ...r, id })
+        }
+        return
+      }
+      setExternalSteps(null)   // built-in templates use generated steps
       const recipe = getRecipeById(id)
       if (recipe) _applyTemplate(recipe)
     })
@@ -582,16 +594,28 @@ export const calculatorView = {
       sessionStorage.removeItem('externalRecipe')
       const methodData = _ext.method === 'v60' ? V60 : _ext.method === 'filter' ? FILTER : AEROPRESS
       setState({
-        method:        _ext.method ?? 'v60',
-        coffee_g:      _ext.coffee_g   ?? methodData.defaults.coffee_g,
-        water_g:       _ext.water_g    ?? methodData.defaults.water_g,
-        ratio:         _ext.ratio      ?? (_ext.water_g / _ext.coffee_g),
-        temp_c:        _ext.temp_c     ?? methodData.defaults.temp_c,
-        brew_time_sec: _ext.brew_time_sec ?? methodData.defaults.brew_time_sec,
-        template:      null, templateOrigin: null,
+        method:          _ext.method ?? 'v60',
+        coffee_g:        _ext.coffee_g   ?? methodData.defaults.coffee_g,
+        water_g:         _ext.water_g    ?? methodData.defaults.water_g,
+        ratio:           _ext.ratio      ?? (_ext.water_g / _ext.coffee_g),
+        temp_c:          _ext.temp_c     ?? methodData.defaults.temp_c,
+        brew_time_sec:   _ext.brew_time_sec ?? methodData.defaults.brew_time_sec,
+        pour_technique:  _ext.technique  ?? null,
+        template:        null, templateOrigin: null,
+      })
+      setExternalSteps({
+        brewSteps:   _ext.brewSteps   ?? null,
+        actualPours: _ext.actualPours ?? null,
       })
       renderAll()
     }
+
+    // Load user's saved recipes into the template dropdown
+    loadMyRecipes().then(recipes => {
+      _userRecipes = recipes
+      setUserRecipes(recipes)
+      renderTemplateOptions(state.method)
+    }).catch(() => {})
   }
 }
 
@@ -616,10 +640,12 @@ function _checkSuggestion() {
 }
 
 function _applyTemplate(recipe) {
-  const { id, coffee_g, water_g, ratio, temp_c, brew_time_sec, aeropress_style } = recipe
+  const { id, method, coffee_g, water_g, ratio, temp_c, brew_time_sec, aeropress_style, technique } = recipe
   setState({
     template: id, templateOrigin: { coffee_g, water_g, ratio, temp_c, brew_time_sec },
     coffee_g, water_g, ratio, temp_c, brew_time_sec,
+    ...(method ? { method } : {}),
+    ...(technique ? { pour_technique: technique } : {}),
     ...(aeropress_style ? { aeropress_style } : {}),
   })
   _dismissedSuggestionId = null

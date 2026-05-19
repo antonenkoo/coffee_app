@@ -111,13 +111,35 @@ export function renderMethodUI() {
 // ─── Template UI ─────────────────────────────────────────────────────────────
 
 /** Populate the recipe <select> for the given method. */
+let _userRecipes = []
+
+export function setUserRecipes(recipes) {
+  _userRecipes = recipes ?? []
+}
+
 export function renderTemplateOptions(method) {
   const select = document.getElementById('template-select')
   if (!select) return
   const recipes = getRecipesForMethod(method)
-  select.innerHTML =
-    `<option value="">${t('template.placeholder')}</option>` +
+  let html = `<option value="">${t('template.placeholder')}</option>` +
     recipes.map(r => `<option value="${r.id}">${r.name}</option>`).join('')
+
+  const mine = _userRecipes.filter(r => r.method === method)
+  if (mine.length) {
+    html += `<optgroup label="── Мои рецепты ──">` +
+      mine.map(r => {
+        const label = [
+          r.bean || null,
+          r.coffee_g ? `${r.coffee_g}г` : null,
+          r.water_g  ? `${r.water_g}мл` : null,
+          r.ratio    ? `1:${(+r.ratio).toFixed(1)}` : null,
+          r.temp_c   ? `${r.temp_c}°C` : null,
+        ].filter(Boolean).join(' · ')
+        return `<option value="user:${r.id}">${label}</option>`
+      }).join('') + '</optgroup>'
+  }
+
+  select.innerHTML = html
   select.value = state.template ?? ''
 }
 
@@ -278,9 +300,50 @@ export function renderWarnings() {
 
 // ─── Steps ────────────────────────────────────────────────────────────────────
 
+let _externalSteps = null   // brewSteps or actualPours from a loaded recipe
+
+export function setExternalSteps(steps) {
+  _externalSteps = steps ?? null
+}
+
+// Convert brewSteps (timer format) → display format for the calculator view
+function _brewStepsToDisplay(brewSteps) {
+  const fmtSec = s => {
+    if (s === null) return '—'
+    const m = Math.floor(s / 60)
+    return `${m}:${String(s % 60).padStart(2, '0')}`
+  }
+  return brewSteps.map(s => ({
+    time:   fmtSec(s.start_sec),
+    action: s.action,
+    note:   s.speed_gs != null
+      ? `⚡ ${s.speed_gs} г/с${s.target_g != null ? ` → ${s.target_g}г` : ''}`
+      : (s.note ?? null),
+  }))
+}
+
+// Convert actualPours (scale recording) → display format
+function _actualPoursToDisplay(pours) {
+  return pours.map((p, i) => ({
+    time:   `${Math.floor(p.start_sec / 60)}:${String(Math.round(p.start_sec) % 60).padStart(2, '0')}`,
+    action: `Пролив ${i + 1}: <b>${p.amount_g}г</b> → итого <b>${p.target_g}г</b>`,
+    note:   `${p.speed_gs} г/с · ${p.duration_sec}с`,
+  }))
+}
+
 export function renderSteps() {
   const list = document.getElementById('steps-list')
-  const steps = getSteps(state)
+  if (!list) return
+
+  let steps
+  if (_externalSteps?.brewSteps?.length) {
+    steps = _brewStepsToDisplay(_externalSteps.brewSteps)
+  } else if (_externalSteps?.actualPours?.length) {
+    steps = _actualPoursToDisplay(_externalSteps.actualPours)
+  } else {
+    steps = getSteps(state)
+  }
+
   list.innerHTML = steps.map(s => `
     <li>
       <span class="step-time">${s.time}</span>

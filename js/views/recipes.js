@@ -604,11 +604,18 @@ export const recipesView = {
 
       card.querySelector('.btn-load').addEventListener('click', () => {
         sessionStorage.setItem('externalRecipe', JSON.stringify({
-          method: r.method, coffee_g: r.coffee_g, water_g: r.water_g,
-          ratio: r.ratio, temp_c: r.temp_c, brew_time_sec: r.brew_time_sec,
-          technique: r.technique ?? null, customTechniqueSteps: r.customTechniqueSteps ?? null,
+          method:              r.method,
+          coffee_g:            r.coffee_g,
+          water_g:             r.water_g,
+          ratio:               r.ratio ?? null,
+          temp_c:              r.temp_c,
+          brew_time_sec:       r.brew_time_sec,
+          technique:           r.technique ?? null,
+          customTechniqueSteps: r.customTechniqueSteps ?? null,
+          brewSteps:           r.brewSteps   ?? null,
+          actualPours:         r.actualPours ?? null,
         }))
-        location.hash = '#calculator'
+        location.hash = '#advanced'
       })
       card.querySelector('.btn-edit').addEventListener('click', () => openEditModal(r))
       card.querySelector('.btn-delete').addEventListener('click', async (e) => {

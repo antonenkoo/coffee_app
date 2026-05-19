@@ -2,6 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
+  <link rel="icon" href="favicon.png" type="image/png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>☕ Brew</title>
   <style>
@@ -180,17 +181,30 @@
       color: var(--muted);
     }
 
-    /* ── Recipe profile chart (always visible in brew phase) ── */
+    /* ── Live BLE graph block (main, shown when scale connected) ── */
+    #block-graph {
+      padding: 10px 14px;
+    }
+    #weight-graph {
+      width: 100%;
+      height: 80px;
+      border-radius: 8px;
+      display: block;
+      opacity: 0.85;
+    }
+
+    /* ── Recipe profile chart (secondary, below steps) ── */
     #recipe-chart-wrap {
       width: 100%;
       position: relative;
+      margin-top: 4px;
     }
     #recipe-chart {
       width: 100%;
-      height: 72px;
-      border-radius: 10px;
+      height: 52px;
+      border-radius: 8px;
       display: block;
-      opacity: 0.9;
+      opacity: 0.45;
     }
 
     /* ── Pour speed hint ── */
@@ -249,22 +263,25 @@
       #brew-app { padding: 40px 48px; }
       #phase-brew { max-width: 900px; width: 100%; gap: 14px; }
 
-      /* 3-row grid: [timer weight] [graph] [flow fact] */
+      /* 3-row grid: [graph] [timer weight] [flow fact] */
       #brew-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
         grid-template-areas:
-          "timer  weight"
           "graph  graph"
+          "timer  weight"
           "flow   fact";
         gap: 14px;
       }
 
+      #block-graph  { grid-area: graph;  display: flex; }
       #block-timer  { grid-area: timer;  display: flex; }
       #block-weight { grid-area: weight; display: flex; }
-      #block-graph  { grid-area: graph;  display: flex; }
       #block-flow   { grid-area: flow;   display: flex; }
       #block-fact   { grid-area: fact;   display: flex; }
+
+      /* Graph full row on desktop */
+      #block-graph #weight-graph { width: 100%; max-width: 100%; height: 110px; }
 
       /* All blocks visible as cards on desktop */
       .brew-block {
@@ -621,10 +638,6 @@
         <input type="checkbox" id="w-flow" checked>
         <span>💧 Скорость потока (г/с)</span>
       </label>
-      <label class="widget-row">
-        <input type="checkbox" id="w-graph">
-        <span>📈 График веса</span>
-      </label>
     </div>
   </div>
 
@@ -637,13 +650,11 @@
   <div id="phase-brew" class="phase hidden">
     <div id="progress-wrap"><div id="progress-fill"></div></div>
 
-    <!-- Recipe profile chart (always visible) -->
-    <div id="recipe-chart-wrap">
-      <canvas id="recipe-chart" width="640" height="144"></canvas>
-    </div>
-
-    <!-- 4-block grid: Timer+Weight / Graph / Flow+Fact -->
+    <!-- Grid: [graph] / [timer weight] / [flow fact] -->
     <div id="brew-grid">
+      <div class="brew-block brew-block--scale" id="block-graph">
+        <canvas id="weight-graph" width="640" height="160"></canvas>
+      </div>
       <div class="brew-block" id="block-timer">
         <div class="brew-block-label">Время</div>
         <div id="brew-timer">00:00</div>
@@ -651,10 +662,6 @@
       <div class="brew-block brew-block--scale" id="block-weight">
         <div class="brew-block-label">Вес</div>
         <div class="brew-block-val"><span id="scale-live-g">—</span><span class="brew-block-unit">г</span></div>
-      </div>
-      <div class="brew-block brew-block--wide" id="block-graph">
-        <div class="brew-block-label">График веса</div>
-        <canvas id="weight-graph" class="brew-graph" width="640" height="100"></canvas>
       </div>
       <div class="brew-block brew-block--scale" id="block-flow">
         <div class="brew-block-label">Поток</div>
@@ -675,6 +682,10 @@
       <div id="next-label" data-i18n="brew.next.label">Следующий</div>
       <div id="next-action"></div>
       <div id="next-in"></div>
+    </div>
+    <!-- Recipe profile chart (secondary — recipe steps with pour profile dots) -->
+    <div id="recipe-chart-wrap">
+      <canvas id="recipe-chart" width="640" height="104"></canvas>
     </div>
     <button id="finish-btn">■&nbsp;&nbsp;Завершить</button>
   </div>
@@ -820,6 +831,8 @@ function startCountdown() {
 let brewInterval  = null
 let elapsed       = 0
 let currentIdx    = -1
+let brewStartTime = 0   // Date.now() at brew start — for smooth real-time graph coords
+let _raf          = null // requestAnimationFrame handle
 
 function getCurrentIdx(sec) {
   let idx = 0
@@ -858,22 +871,30 @@ function updateStepUI(idx) {
   }
 }
 
+const weightGraph = document.getElementById('weight-graph')
+
 function startBrew() {
   showPhase('phase-brew')
-  elapsed    = 0
-  currentIdx = 0
+  elapsed       = 0
+  currentIdx    = 0
+  brewStartTime = Date.now()
 
   _graphPts.length = 0
   document.getElementById('brew-fact-text').textContent =
     _FACTS[Math.floor(Math.random() * _FACTS.length)]
 
-  // Draw initial recipe profile chart
-  _drawRecipeChart()
+  // Fix canvas blur on Retina/high-DPR displays
+  _initCanvas(document.getElementById('recipe-chart'))
+  _initCanvas(weightGraph)
+
+  // Start 60fps draw loop (handles all canvas rendering)
+  _startDrawLoop()
 
   if (isSimpleMode) {
     document.getElementById('current-step-wrap').style.display = 'none'
     document.getElementById('next-step-wrap').style.display    = 'none'
     document.getElementById('progress-wrap').style.display     = 'none'
+    document.getElementById('recipe-chart-wrap').style.display = 'none'
     brewInterval = setInterval(() => {
       elapsed++
       document.getElementById('brew-timer').textContent = fmt(elapsed)
@@ -886,11 +907,10 @@ function startBrew() {
   brewInterval = setInterval(() => {
     elapsed++
 
-    // Timer + progress + recipe chart
+    // Timer + progress bar (every 1s is fine for these)
     document.getElementById('brew-timer').textContent = fmt(elapsed)
     document.getElementById('progress-fill').style.width =
       `${Math.min(100, (elapsed / brew_time_sec) * 100)}%`
-    _drawRecipeChart()
 
     // Step advance
     const newIdx = getCurrentIdx(elapsed)
@@ -908,22 +928,55 @@ function startBrew() {
       }
     }
 
-    // Update "next in" countdown + voice alert at 5 sec
+    // Next-step countdown: show seconds + 5-4-3-2-1 rising beeps
     const next = timerSteps[currentIdx + 1]
     if (next) {
       const rem = next.start_sec - elapsed
       document.getElementById('next-in').textContent =
-        rem > 0 ? `через ${fmt(rem)}` : 'сейчас!'
-      if (rem === 5 && voiceAlertSentForStep !== currentIdx + 1) {
-        voiceAlertSentForStep = currentIdx + 1
-        playAlert()
+        rem <= 0 ? 'сейчас!' : rem <= 9 ? `${rem}с` : `через ${fmt(rem)}`
+      if (rem >= 1 && rem <= 5) {
+        _brewTone(660 + (5 - rem) * 60, 0.09)  // 660→900 Hz rising pitch
       }
     }
   }, 1000)
 }
 
+// Analyse _graphPts to find pour episodes (periods of rising weight).
+function _detectActualPours(pts) {
+  if (pts.length < 3) return []
+  const pours = []
+  let inPour = false, pStart = 0, pStartW = 0
+
+  for (let i = 2; i < pts.length; i++) {
+    const dt   = pts[i].t - pts[i - 2].t
+    const dw   = pts[i].w - pts[i - 2].w
+    const rate = dt > 0.05 ? dw / dt : 0
+
+    if (!inPour && rate > 0.5) {
+      inPour = true
+      pStart  = pts[i - 2].t
+      pStartW = pts[i - 2].w
+    } else if (inPour && rate < 0.15) {
+      inPour = false
+      const dur    = pts[i].t - pStart
+      const amount = pts[i].w - pStartW
+      if (amount > 5 && dur > 0.5) {
+        pours.push({
+          start_sec:    +pStart.toFixed(1),
+          duration_sec: +dur.toFixed(1),
+          amount_g:     +amount.toFixed(1),
+          target_g:     +pts[i].w.toFixed(1),
+          speed_gs:     +(amount / dur).toFixed(2),
+        })
+      }
+    }
+  }
+  return pours
+}
+
 function showDone(totalSec) {
   clearInterval(brewInterval)
+  _stopDrawLoop()
   showPhase('phase-done')
   document.getElementById('done-time').textContent =
     t('brew.time.label') + fmt(totalSec)
@@ -953,6 +1006,7 @@ function showDone(totalSec) {
       stored.scale_avg_flow = totalSec > 0
         ? +Math.max(0, (stored.scale_final_weight - firstW) / totalSec).toFixed(3)
         : 0
+      stored.actualPours = _detectActualPours(_graphPts)
     }
     sessionStorage.setItem('brewState', JSON.stringify(stored))
   } catch(_) {}
@@ -976,6 +1030,7 @@ document.getElementById('stop-btn').addEventListener('click', () => {
   const ok = confirm(t('brew.stop.confirm'))
   if (ok) {
     clearInterval(brewInterval)
+    _stopDrawLoop()
     window.location.href = 'index.html'
   }
 })
@@ -994,8 +1049,6 @@ document.getElementById('back-btn').addEventListener('click', () => {
 })
 
 // ── Voice alerts ─────────────────────────────────────────────────────────────
-let voiceAlertSentForStep = -1
-
 function _brewTone(freq, dur, delayStart = 0) {
   try {
     const osc  = _audioCtx.createOscillator()
@@ -1025,7 +1078,6 @@ const scaleBtn      = document.getElementById('scale-btn')
 const scaleBtnTx    = document.getElementById('scale-btn-text')
 const scaleWidgets  = document.getElementById('scale-widgets')
 const tareBtn       = document.getElementById('tare-btn')
-const weightCanvas  = document.getElementById('weight-graph')
 
 // Widget preference helpers
 function _wPref(id)    { return localStorage.getItem('scale_w_' + id) !== '0' }
@@ -1064,104 +1116,141 @@ const _FACTS = [
 function _applyWidgets() {
   const showWeight = document.getElementById('w-weight').checked
   const showFlow   = document.getElementById('w-flow').checked
-  const showGraph  = document.getElementById('w-graph').checked
   const connected  = scale.state === 'connected'
-
-  // .active class: on desktop = full opacity; on mobile = display: flex (via CSS)
+  document.getElementById('block-graph').classList.toggle('active',  connected)
   document.getElementById('block-weight').classList.toggle('active', connected && showWeight)
   document.getElementById('block-flow').classList.toggle('active',   connected && showFlow)
-  document.getElementById('block-graph').classList.toggle('active',  connected && showGraph)
-  weightCanvas.style.display = (connected && showGraph) ? 'block' : 'none'
 }
 
-// Cumulative weight graph (all points from brew start, never shifted)
-const _graphPts = []  // { w, t } — weight + elapsed seconds
+// Canvas DPR initialisation — call once after layout (inside startBrew)
+function _initCanvas(canvas) {
+  const dpr = window.devicePixelRatio || 1
+  const w   = canvas.offsetWidth  || canvas.width  / dpr
+  const h   = canvas.offsetHeight || canvas.height / dpr
+  canvas.width  = Math.round(w * dpr)
+  canvas.height = Math.round(h * dpr)
+}
 
-// Shared coord helpers for all charts
-function _chartCoords(canvas, maxT, maxW) {
+// Cumulative BLE weight points
+const _graphPts = []  // { w, t }
+
+// Build realistic stepped pour profile from timer steps.
+// Weight rises steeply during pours, flat during waits/drains.
+function _buildRecipeProfile() {
+  const pts = []
+  let prevG = 0
+
+  const add = (t, w) => {
+    const last = pts[pts.length - 1]
+    if (!last || last.t !== t || last.w !== w) pts.push({ t, w })
+  }
+
+  add(0, 0)
+
+  for (let i = 0; i < timerSteps.length; i++) {
+    const step = timerSteps[i]
+    const next = timerSteps[i + 1]
+    if (step.target_g == null) continue
+
+    const delta = step.target_g - prevG
+
+    if (delta > 0) {
+      // Pour ramp: use speed_gs if known, else fallback ~3.5 g/s
+      const rate   = step.speed_gs || 3.5
+      const maxDur = next ? (next.start_sec - step.start_sec) * 0.85 : 20
+      const dur    = Math.min(delta / rate, maxDur)
+      add(step.start_sec, prevG)           // pour start
+      add(step.start_sec + dur, step.target_g) // pour end
+      prevG = step.target_g
+    } else {
+      add(step.start_sec, prevG)           // wait/drain step — flat
+    }
+
+    // Flat until next step
+    const nextT = next ? next.start_sec : brew_time_sec
+    add(nextT, prevG)
+  }
+
+  return pts
+}
+
+// Canvas coord helper (fixed scales from recipe)
+function _chartPx(canvas) {
   const W = canvas.width, H = canvas.height
-  const pad = { t: H * 0.08, b: H * 0.08 }
-  const innerH = H - pad.t - pad.b
+  const maxT = brew_time_sec || 1
+  const maxW = (water_g || 1) * 1.1
+  const padT = H * 0.12, innerH = H - padT * 2
   return {
     W, H,
     px: (t, w) => ({
       x: (t / maxT) * W,
-      y: pad.t + innerH - (Math.min(w, maxW * 1.05) / (maxW * 1.1)) * innerH
+      y: padT + innerH - (Math.min(w, maxW) / maxW) * innerH
     })
   }
 }
 
-// Always-visible recipe profile chart (+ BLE overlay when connected)
-function _drawRecipeChart() {
+// Reference chart: BLE live data as dots + recipe target landmarks + time marker
+function _drawRecipeChart(realT = 0) {
   const canvas = document.getElementById('recipe-chart')
   if (!canvas) return
   const ctx = canvas.getContext('2d')
-  const maxT = brew_time_sec || 1
-  const maxW = (water_g || 1) * 1.05
-  const { W, H, px } = _chartCoords(canvas, maxT, maxW)
-
+  const { W, H, px } = _chartPx(canvas)
   ctx.clearRect(0, 0, W, H)
 
-  // Profile points from timer steps
-  const profile = timerSteps.filter(s => s.target_g != null)
-
-  // 1. Dashed profile line
-  if (profile.length >= 2) {
-    ctx.beginPath()
-    ctx.setLineDash([4, 5])
-    profile.forEach((s, i) => {
-      const {x, y} = px(s.start_sec, s.target_g)
-      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)
-    })
-    ctx.strokeStyle = 'rgba(232,213,176,0.28)'
-    ctx.lineWidth = 1.5
-    ctx.stroke()
-    ctx.setLineDash([])
-
-    // Profile dots
-    profile.forEach(s => {
-      const {x, y} = px(s.start_sec, s.target_g)
-      ctx.beginPath()
-      ctx.arc(x, y, 3.5, 0, Math.PI * 2)
-      ctx.fillStyle = 'rgba(232,213,176,0.55)'
-      ctx.fill()
-    })
-  }
-
-  // 2. BLE live data (fill + line)
-  if (_graphPts.length >= 2) {
-    ctx.beginPath()
-    _graphPts.forEach((p, i) => {
-      const {x, y} = px(p.t, p.w)
-      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)
-    })
-    const {x: lx} = px(_graphPts[_graphPts.length - 1].t, 0)
-    ctx.lineTo(lx, H); ctx.lineTo(0, H); ctx.closePath()
-    ctx.fillStyle = 'rgba(232,213,176,0.07)'
-    ctx.fill()
-
-    ctx.beginPath()
-    _graphPts.forEach((p, i) => {
-      const {x, y} = px(p.t, p.w)
-      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)
-    })
-    ctx.strokeStyle = 'rgba(232,213,176,0.85)'
-    ctx.lineWidth = 2; ctx.lineJoin = 'round'
-    ctx.stroke()
-  }
-
-  // 3. Current time marker
-  if (elapsed > 0) {
-    const {x} = px(elapsed, 0)
+  // Time marker (smooth — driven by realT from RAF loop)
+  if (realT > 0) {
+    const { x } = px(realT, 0)
     ctx.beginPath()
     ctx.moveTo(x, 0); ctx.lineTo(x, H)
-    ctx.strokeStyle = 'rgba(255,255,255,0.12)'
-    ctx.lineWidth = 1; ctx.setLineDash([])
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)'
+    ctx.lineWidth = 1.5
     ctx.stroke()
   }
+
+  // Live BLE track as individual dots (no connecting lines)
+  _graphPts.forEach(p => {
+    const { x, y } = px(p.t, p.w)
+    ctx.beginPath()
+    ctx.arc(x, y, 2, 0, Math.PI * 2)
+    ctx.fillStyle = 'rgba(232,213,176,0.65)'
+    ctx.fill()
+  })
+
+  // Recipe target dots — landmark for each pour target weight
+  timerSteps.forEach(s => {
+    if (s.target_g == null) return
+    const { x, y } = px(s.start_sec, s.target_g)
+    const past = s.start_sec < realT
+    // Glow ring on upcoming targets
+    if (!past) {
+      ctx.beginPath()
+      ctx.arc(x, y, 9, 0, Math.PI * 2)
+      ctx.strokeStyle = 'rgba(232,213,176,0.18)'
+      ctx.lineWidth = 1
+      ctx.stroke()
+    }
+    ctx.beginPath()
+    ctx.arc(x, y, past ? 4 : 6, 0, Math.PI * 2)
+    ctx.fillStyle = past ? 'rgba(232,213,176,0.3)' : 'rgba(232,213,176,0.9)'
+    ctx.fill()
+  })
 }
 
-// BLE-only weight graph (widget in block-graph)
+// RAF draw loop — runs at 60fps during brew
+function _startDrawLoop() {
+  const loop = () => {
+    const realT = brewStartTime > 0 ? (Date.now() - brewStartTime) / 1000 : 0
+    _drawGraphOn(weightGraph)
+    _drawRecipeChart(realT)
+    _raf = requestAnimationFrame(loop)
+  }
+  _raf = requestAnimationFrame(loop)
+}
+function _stopDrawLoop() {
+  if (_raf) { cancelAnimationFrame(_raf); _raf = null }
+}
+
+// Done-screen graph (BLE track only, auto-scaled)
 function _drawGraphOn(canvas) {
   if (_graphPts.length < 2) return
   const c = canvas, ctx = c.getContext('2d')
@@ -1169,21 +1258,20 @@ function _drawGraphOn(canvas) {
   ctx.clearRect(0, 0, W, H)
   const maxW = Math.max(..._graphPts.map(p => p.w), 1)
   const maxT = _graphPts[_graphPts.length - 1].t || 1
+  const py = (w) => H - (w / maxW) * H * 0.85 - H * 0.05
   ctx.beginPath()
   _graphPts.forEach((p, i) => {
     const x = (p.t / maxT) * W
-    const y = H - (p.w / maxW) * H * 0.85 - H * 0.05
-    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)
+    i === 0 ? ctx.moveTo(x, py(p.w)) : ctx.lineTo(x, py(p.w))
   })
   ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath()
   ctx.fillStyle = 'rgba(232,213,176,0.08)'; ctx.fill()
   ctx.beginPath()
   _graphPts.forEach((p, i) => {
     const x = (p.t / maxT) * W
-    const y = H - (p.w / maxW) * H * 0.85 - H * 0.05
-    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)
+    i === 0 ? ctx.moveTo(x, py(p.w)) : ctx.lineTo(x, py(p.w))
   })
-  ctx.strokeStyle = 'rgba(232,213,176,0.8)'; ctx.lineWidth = 2; ctx.lineJoin = 'round'
+  ctx.strokeStyle = 'rgba(232,213,176,0.85)'; ctx.lineWidth = 2; ctx.lineJoin = 'round'
   ctx.stroke()
 }
 
@@ -1209,9 +1297,9 @@ const scale = new BLEScale({
     } else {
       flowPrevW = g; flowPrevT = now
     }
-    // cumulative graph
-    _graphPts.push({ w: Math.max(0, g), t: elapsed })
-    if (document.getElementById('w-graph').checked) _drawGraphOn(weightCanvas)
+    // cumulative graph — use real float seconds for smooth rendering
+    const realT = brewStartTime > 0 ? (Date.now() - brewStartTime) / 1000 : 0
+    _graphPts.push({ w: Math.max(0, g), t: realT })
   },
   onState(state, name) {
     scaleBtn.className = state
@@ -1229,10 +1317,9 @@ const scale = new BLEScale({
       tareBtn.classList.remove('visible')
       scaleLiveG.textContent = '—'
       scaleLiveFlow.textContent = '—'
-      weightCanvas.style.display = 'none'
+      document.getElementById('block-graph').classList.remove('active')
       document.getElementById('block-weight').classList.remove('active')
       document.getElementById('block-flow').classList.remove('active')
-      document.getElementById('block-graph').classList.remove('active')
       flowPrevW = null; flowPrevT = null
     }
   }
@@ -1241,6 +1328,8 @@ const scale = new BLEScale({
 if (!scale.supported) {
   scaleBtn.classList.add('unsupported')
   scaleBtn.title = 'Web Bluetooth не поддерживается в этом браузере'
+} else {
+  scale.autoReconnect()
 }
 
 scaleBtn.addEventListener('click', () => {
