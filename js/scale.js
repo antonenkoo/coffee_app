@@ -6,16 +6,18 @@ const _NAME_KEY    = 'ble_scale_name'
 const FILTER_SIZE  = 5
 
 export class BLEScale {
-  constructor({ onWeight, onState }) {
-    this._onWeight = onWeight
-    this._onState  = onState
-    this.device    = null
-    this.weight    = null
-    this.state     = 'disconnected'
-    this._tareChar = null
-    this._buf      = []   // median filter circular buffer
-    this._lastRaw  = 0
-    this._softTare = 0    // software tare offset (used when no HW tare char)
+  constructor({ onWeight, onState, onFlowRate = null }) {
+    this._onWeight   = onWeight
+    this._onState    = onState
+    this._onFlowRate = onFlowRate
+    this.device      = null
+    this.weight      = null
+    this.flowRate    = 0      // г/с, обновляется из 6-байтового пакета
+    this.state       = 'disconnected'
+    this._tareChar   = null
+    this._buf        = []     // median filter circular buffer
+    this._lastRaw    = 0
+    this._softTare   = 0      // software tare offset
   }
 
   get supported() { return !!navigator.bluetooth }
@@ -35,19 +37,27 @@ export class BLEScale {
     await char.startNotifications()
     char.addEventListener('characteristicvaluechanged', e => {
       const buf = e.target.value
-      let raw
-      if (buf.byteLength === 4) {
-        // New firmware: int32 big-endian, grams × 100
-        raw = new DataView(buf.buffer, buf.byteOffset, 4).getInt32(0, false) / 100
+      let raw, flow = 0
+
+      if (buf.byteLength >= 4) {
+        // New firmware: [int32 weight×100 BE][int16 flowRate×10 BE]
+        const dv = new DataView(buf.buffer, buf.byteOffset)
+        raw = dv.getInt32(0, false) / 100
+        if (buf.byteLength >= 6) {
+          flow = dv.getInt16(4, false) / 10
+        }
       } else {
         // Legacy firmware: plain text float string
         raw = parseFloat(new TextDecoder().decode(buf))
       }
+
       if (isNaN(raw)) return
       const filtered = this._filter(raw)
       const g = Math.round((filtered - this._softTare) * 10) / 10
-      this.weight = g
+      this.weight   = g
+      this.flowRate = flow
       this._onWeight(g)
+      if (flow > 0 && this._onFlowRate) this._onFlowRate(flow)
     })
     try {
       this._tareChar = await svc.getCharacteristic(TARE_UUID)
@@ -108,16 +118,15 @@ export class BLEScale {
       } catch (err) {
         console.warn('[BLEScale] tare failed:', err.message)
       }
-      // Wait for HW tare to settle, then clear filter so the zero is clean
-      await new Promise(r => setTimeout(r, 200))
+      await new Promise(r => setTimeout(r, 2800))  // wait for stability + tare on firmware
       this._buf      = []
       this._softTare = 0
     } else {
-      // No HW tare char — apply software offset
       this._softTare = this._lastRaw
       this._buf      = []
     }
-    this.weight = 0
+    this.weight   = 0
+    this.flowRate = 0
     this._onWeight(0)
   }
 
@@ -128,6 +137,7 @@ export class BLEScale {
   _drop() {
     this.device    = null
     this.weight    = null
+    this.flowRate  = 0
     this._tareChar = null
     this._buf      = []
     this._softTare = 0
