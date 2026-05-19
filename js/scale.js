@@ -3,6 +3,7 @@ const SERVICE_UUID = '4fafc201-1fb5-459e-8fcc-c5c9c331914b'
 const CHAR_UUID    = 'beb5483e-36e1-4688-b7f5-ea07361b26a8'
 const TARE_UUID    = 'beb5483e-36e1-4688-b7f5-ea07361b26a9'
 const _NAME_KEY    = 'ble_scale_name'
+const FILTER_SIZE  = 5
 
 export class BLEScale {
   constructor({ onWeight, onState }) {
@@ -10,11 +11,22 @@ export class BLEScale {
     this._onState  = onState
     this.device    = null
     this.weight    = null
-    this.state     = 'disconnected' // disconnected | connecting | connected
+    this.state     = 'disconnected'
     this._tareChar = null
+    this._buf      = []   // median filter circular buffer
+    this._lastRaw  = 0
+    this._softTare = 0    // software tare offset (used when no HW tare char)
   }
 
   get supported() { return !!navigator.bluetooth }
+
+  _filter(raw) {
+    this._lastRaw = raw
+    this._buf.push(raw)
+    if (this._buf.length > FILTER_SIZE) this._buf.shift()
+    const sorted = [...this._buf].sort((a, b) => a - b)
+    return sorted[Math.floor(sorted.length / 2)]
+  }
 
   async _connectToDevice(device) {
     const srv  = await device.gatt.connect()
@@ -22,8 +34,12 @@ export class BLEScale {
     const char = await svc.getCharacteristic(CHAR_UUID)
     await char.startNotifications()
     char.addEventListener('characteristicvaluechanged', e => {
-      const g = parseFloat(new TextDecoder().decode(e.target.value))
-      if (!isNaN(g)) { this.weight = g; this._onWeight(g) }
+      const raw = parseFloat(new TextDecoder().decode(e.target.value))
+      if (isNaN(raw)) return
+      const filtered = this._filter(raw)
+      const g = Math.round((filtered - this._softTare) * 10) / 10
+      this.weight = g
+      this._onWeight(g)
     })
     try {
       this._tareChar = await svc.getCharacteristic(TARE_UUID)
@@ -56,8 +72,6 @@ export class BLEScale {
     }
   }
 
-  // Silently reconnect to the previously paired device (no user gesture needed).
-  // Call on page load; resolves immediately if no prior device is cached.
   async autoReconnect() {
     if (!this.supported || this.state !== 'disconnected') return
     if (typeof navigator.bluetooth.getDevices !== 'function') return
@@ -80,18 +94,38 @@ export class BLEScale {
   }
 
   async tare() {
-    if (!this._tareChar) return
-    try {
-      await this._tareChar.writeValueWithoutResponse(new Uint8Array([0x01]))
-    } catch (err) {
-      console.warn('[BLEScale] tare failed:', err.message)
+    if (this._tareChar) {
+      try {
+        await this._tareChar.writeValueWithoutResponse(new Uint8Array([0x01]))
+      } catch (err) {
+        console.warn('[BLEScale] tare failed:', err.message)
+      }
+      // Wait for HW tare to settle, then clear filter so the zero is clean
+      await new Promise(r => setTimeout(r, 200))
+      this._buf      = []
+      this._softTare = 0
+    } else {
+      // No HW tare char — apply software offset
+      this._softTare = this._lastRaw
+      this._buf      = []
     }
+    this.weight = 0
+    this._onWeight(0)
   }
 
   disconnect() {
     this.device?.gatt?.disconnect()
   }
 
-  _drop() { this.device = null; this.weight = null; this._tareChar = null; this._set('disconnected') }
+  _drop() {
+    this.device    = null
+    this.weight    = null
+    this._tareChar = null
+    this._buf      = []
+    this._softTare = 0
+    this._lastRaw  = 0
+    this._set('disconnected')
+  }
+
   _set(s) { this.state = s; this._onState(s, this.device?.name) }
 }

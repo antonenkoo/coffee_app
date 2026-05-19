@@ -2454,3 +2454,106 @@ textarea.calc-modal-input { resize: vertical; min-height: 80px; line-height: 1.5
     flex: 1;
   }
 }
+
+/* ─── Splash Screen ──────────────────────────────────────────────────────── */
+#splash {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  transition: opacity 0.45s ease;
+}
+#splash.sp-fade-out { opacity: 0; pointer-events: none; }
+
+#splash-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+}
+
+#splash-icon {
+  font-size: 3rem;
+  animation: sp-breathe 2.2s ease-in-out infinite;
+  will-change: transform;
+}
+
+#splash-spinner {
+  width: 26px;
+  height: 26px;
+  border: 2px solid var(--surface-3);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: sp-spin 0.75s linear infinite;
+  will-change: transform;
+}
+
+@keyframes sp-breathe {
+  0%, 100% { transform: scale(1);    opacity: 0.85; }
+  50%       { transform: scale(1.1); opacity: 1;    }
+}
+@keyframes sp-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Scatter: icon and spinner fly outward */
+@keyframes sp-scatter-out {
+  0%   { transform: translate(0, 0) rotate(0deg);          opacity: 1; }
+  100% { transform: translate(var(--tx), var(--ty)) rotate(var(--rot)); opacity: 0; }
+}
+.sp-scatter {
+  animation: sp-scatter-out 0.42s cubic-bezier(.4, 0, .8, .4) forwards;
+}
+
+/* Welcome text container */
+#splash-welcome {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  font-size: clamp(1.4rem, 5vw, 2rem);
+  font-weight: 300;
+  letter-spacing: 0.06em;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+/* Individual letters */
+.sp-letter {
+  display: inline-block;
+  opacity: 0;
+}
+
+@keyframes sp-letter-assemble {
+  0%   { transform: translate(var(--tx), var(--ty)) scale(0.2); opacity: 0; }
+  55%  { opacity: 1; }
+  100% { transform: translate(0, 0) scale(1); opacity: 1; }
+}
+@keyframes sp-letter-scatter {
+  0%   { transform: translate(0, 0) scale(1) rotate(0deg); opacity: 1; }
+  100% { transform: translate(var(--tx), var(--ty)) scale(0.1) rotate(var(--rot)); opacity: 0; }
+}
+
+.sp-letter-in  { animation: sp-letter-assemble 0.52s cubic-bezier(.2, .8, .3, 1) forwards; }
+.sp-letter-out { animation: sp-letter-scatter  0.38s cubic-bezier(.4, 0, 1, 1)   forwards; }
+
+/* ─── App Assembly Animation (after splash) ─────────────────────────────── */
+.app-entering header,
+.app-entering #view {
+  opacity: 0;
+  transform: translateY(16px);
+}
+
+@keyframes ui-assemble {
+  from { opacity: 0; transform: translateY(16px) scale(0.98); }
+  to   { opacity: 1; transform: none; }
+}
+
+.app-assembled header {
+  animation: ui-assemble 0.45s cubic-bezier(.2, .8, .4, 1) 0.04s both;
+}
+.app-assembled #view {
+  animation: ui-assemble 0.45s cubic-bezier(.2, .8, .4, 1) 0.12s both;
+}
