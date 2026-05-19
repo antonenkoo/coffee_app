@@ -34,7 +34,15 @@ export class BLEScale {
     const char = await svc.getCharacteristic(CHAR_UUID)
     await char.startNotifications()
     char.addEventListener('characteristicvaluechanged', e => {
-      const raw = parseFloat(new TextDecoder().decode(e.target.value))
+      const buf = e.target.value
+      let raw
+      if (buf.byteLength === 4) {
+        // New firmware: int32 big-endian, grams × 100
+        raw = new DataView(buf.buffer, buf.byteOffset, 4).getInt32(0, false) / 100
+      } else {
+        // Legacy firmware: plain text float string
+        raw = parseFloat(new TextDecoder().decode(buf))
+      }
       if (isNaN(raw)) return
       const filtered = this._filter(raw)
       const g = Math.round((filtered - this._softTare) * 10) / 10
