@@ -477,6 +477,111 @@ main {
   line-height: 1.4;
 }
 
+/* ─── Brew Steps Editor ─────────────────────────────────────────────────────── */
+.steps-edit-btn {
+  margin-left: auto;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-dim);
+  font-size: 0.75rem;
+  padding: 3px 8px;
+  cursor: pointer;
+  font-family: inherit;
+  flex-shrink: 0;
+  line-height: 1.4;
+}
+.steps-edit-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+#steps-edit-panel { padding: 0 var(--gap-m) var(--gap-m); }
+#steps-edit-panel.hidden { display: none; }
+
+.steps-edit-cols {
+  display: grid;
+  grid-template-columns: 52px 1fr 64px 24px;
+  gap: 6px;
+  padding: 2px 0 6px;
+  font-size: 0.68rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  margin-bottom: 2px;
+}
+
+.steps-edit-row {
+  display: grid;
+  grid-template-columns: 52px 1fr 64px 24px;
+  gap: 6px;
+  align-items: center;
+  padding: 3px 0;
+  border-bottom: 1px solid rgba(200,169,110,0.04);
+}
+.steps-edit-row:last-child { border-bottom: none; }
+
+.steps-edit-input {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 0.82rem;
+  font-family: inherit;
+  padding: 5px 7px;
+  outline: none;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.steps-edit-input:focus { border-color: var(--accent); }
+.steps-edit-time {
+  color: var(--accent);
+  font-weight: 600;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.steps-edit-g { text-align: right; }
+
+.steps-edit-del {
+  width: 24px; height: 24px;
+  border: none; background: transparent;
+  color: var(--text-dim); font-size: 1.1rem; line-height: 1;
+  cursor: pointer; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0;
+}
+.steps-edit-del:hover { color: var(--warning, #d4924a); }
+
+.steps-edit-add {
+  width: 100%; margin-top: 8px;
+  padding: 8px; background: transparent;
+  border: 1px dashed rgba(255,255,255,0.08);
+  border-radius: var(--radius-s);
+  color: var(--text-dim); font-size: 0.8rem;
+  cursor: pointer; font-family: inherit;
+  transition: border-color 0.15s, color 0.15s;
+}
+.steps-edit-add:hover { border-color: var(--accent); color: var(--accent); }
+
+.steps-edit-footer {
+  display: flex; gap: 6px; margin-top: 10px;
+}
+.steps-edit-footer button {
+  border-radius: 20px; font-family: inherit;
+  font-size: 0.85rem; padding: 7px 12px; cursor: pointer;
+}
+#steps-edit-reset {
+  background: transparent; border: 1px solid var(--border); color: var(--text-dim);
+}
+#steps-edit-reset:hover { color: var(--text); border-color: var(--text-dim); }
+#steps-edit-cancel {
+  flex: 1; background: transparent; border: 1px solid var(--border); color: var(--text-dim);
+}
+#steps-edit-cancel:hover { border-color: var(--text-dim); }
+#steps-edit-save {
+  flex: 2; background: var(--accent); border: none; color: #0e0e0e; font-weight: 700;
+}
+#steps-edit-save:hover { background: var(--accent-hover, #f0e0c0); }
+
 /* ─── Barista Tips ─────────────────────────────────────────────────────────── */
 #barista-tips {
   background: var(--surface);

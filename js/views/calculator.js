@@ -8,7 +8,7 @@ import {
   renderAll, renderDynamic, renderParams, renderMethodUI,
   renderTemplateOptions, renderTemplateDescription, renderTechniques,
   renderTemplateSuggestion, hideTemplateSuggestion, getPendingSuggestion,
-  getMethodData, setUserRecipes, setExternalSteps,
+  getMethodData, setUserRecipes, setExternalSteps, getExternalSteps, renderSteps,
 } from '../ui.js'
 import { openRatioModal, initModal } from '../modal.js'
 import { V60 }       from '../../data/v60.js'
@@ -25,7 +25,83 @@ import { BLEScale } from '../scale.js'
 let _ratioLocked = false
 let _ratioModalOpen = false
 let _dismissedSuggestionId = null
-let _userRecipes = []   // loaded from Firestore on init
+let _userRecipes = []
+let _stepsEditMode = false
+
+// ── Brew Steps Editor helpers ──────────────────────────────────────────────────
+const _fmtStepSec = sec =>
+  sec == null ? '—' : `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`
+
+const _parseStepSec = str => {
+  if (!str || !str.trim() || str.trim() === '—') return null
+  const p = str.trim().split(':')
+  return p.length === 2 ? (parseInt(p[0]) || 0) * 60 + (parseInt(p[1]) || 0) : (parseInt(p[0]) || 0)
+}
+
+const _actionToLabel = action =>
+  (action || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+    .split(':')[0].slice(0, 35).trim()
+
+function _buildStepEditRow({ time_str, label, grams }) {
+  const row = document.createElement('div')
+  row.className = 'steps-edit-row'
+  row.innerHTML = `
+    <input class="steps-edit-input steps-edit-time" type="text" value="${time_str}" placeholder="—">
+    <input class="steps-edit-input steps-edit-name" type="text" value="${(label || '').replace(/[<>"]/g, '')}" placeholder="Название шага">
+    <input class="steps-edit-input steps-edit-g" type="number" step="5" min="0" value="${grams || ''}" placeholder="0">
+    <button class="steps-edit-del" title="Удалить">×</button>`
+  row.querySelector('.steps-edit-del').addEventListener('click', () => row.remove())
+  return row
+}
+
+function _openStepsEdit() {
+  const ext = getExternalSteps()
+  const source = ext?.brewSteps?.length ? ext.brewSteps : getBrewSteps(state)
+  const rowsEl = document.getElementById('steps-edit-rows')
+  if (!rowsEl) return
+  rowsEl.innerHTML = ''
+  source.forEach(s => rowsEl.appendChild(_buildStepEditRow({
+    time_str: _fmtStepSec(s.start_sec),
+    label:    _actionToLabel(s.action),
+    grams:    s.target_g ?? 0,
+  })))
+  document.getElementById('steps-list')?.classList.add('hidden')
+  document.getElementById('steps-edit-panel')?.classList.remove('hidden')
+  const btn = document.getElementById('steps-edit-btn')
+  if (btn) btn.textContent = '✕'
+  _stepsEditMode = true
+}
+
+function _closeStepsEdit() {
+  if (!_stepsEditMode) return
+  document.getElementById('steps-edit-panel')?.classList.add('hidden')
+  document.getElementById('steps-list')?.classList.remove('hidden')
+  const btn = document.getElementById('steps-edit-btn')
+  if (btn) btn.textContent = '✏ Изменить'
+  _stepsEditMode = false
+}
+
+function _saveStepsEdit() {
+  const rows = document.querySelectorAll('#steps-edit-rows .steps-edit-row')
+  const brewSteps = []
+  rows.forEach(row => {
+    const timeStr = row.querySelector('.steps-edit-time')?.value.trim() ?? '—'
+    const label   = row.querySelector('.steps-edit-name')?.value.trim() || ''
+    const g       = parseFloat(row.querySelector('.steps-edit-g')?.value) || 0
+    if (!label && !g) return
+    brewSteps.push({
+      start_sec: _parseStepSec(timeStr),
+      target_g:  g,
+      speed_gs:  null,
+      action:    g > 0 ? `${label || '—'} → <b>${g}г</b>` : (label || '—'),
+      note:      null,
+    })
+  })
+  if (!brewSteps.length) return
+  setExternalSteps({ brewSteps, actualPours: null })
+  renderSteps()
+  _closeStepsEdit()
+}
 
 export const calculatorView = {
   getHTML() {
@@ -226,8 +302,23 @@ export const calculatorView = {
         </div>
       </div>
       <details id="brew-steps" open>
-        <summary data-i18n="section.brewsteps">Brew Steps</summary>
+        <summary>
+          <span data-i18n="section.brewsteps">Brew Steps</span>
+          <button id="steps-edit-btn" class="steps-edit-btn">✏ Изменить</button>
+        </summary>
         <ol id="steps-list"></ol>
+        <div id="steps-edit-panel" class="hidden">
+          <div class="steps-edit-cols">
+            <span>Время</span><span>Шаг</span><span style="text-align:right">г</span><span></span>
+          </div>
+          <div id="steps-edit-rows"></div>
+          <button id="steps-edit-add" class="steps-edit-add">+ Добавить шаг</button>
+          <div class="steps-edit-footer">
+            <button id="steps-edit-reset">↺ Авто</button>
+            <button id="steps-edit-cancel">Отмена</button>
+            <button id="steps-edit-save">✓ Сохранить</button>
+          </div>
+        </div>
       </details>
       <section id="barista-tips">
         <div class="tips-header" data-i18n="section.tips">Barista Tips</div>
@@ -300,7 +391,8 @@ export const calculatorView = {
         }
         _dismissedSuggestionId = null
         hideTemplateSuggestion()
-        setExternalSteps(null)   // clear saved steps when switching method
+        setExternalSteps(null)
+        _closeStepsEdit()
         renderAll()
       })
     })
@@ -585,6 +677,27 @@ export const calculatorView = {
     // ── Modal ───────────────────────────────────────────────────────────────────
     initModal()
 
+    // ── Brew Steps Edit ─────────────────────────────────────────────────────────
+    _stepsEditMode = false
+    document.getElementById('steps-edit-btn')?.addEventListener('click', (e) => {
+      e.stopPropagation()
+      _stepsEditMode ? _closeStepsEdit() : _openStepsEdit()
+    })
+    document.getElementById('steps-edit-cancel')?.addEventListener('click', _closeStepsEdit)
+    document.getElementById('steps-edit-save')?.addEventListener('click', _saveStepsEdit)
+    document.getElementById('steps-edit-reset')?.addEventListener('click', () => {
+      setExternalSteps(null)
+      renderSteps()
+      _closeStepsEdit()
+    })
+    document.getElementById('steps-edit-add')?.addEventListener('click', () => {
+      const rowsEl = document.getElementById('steps-edit-rows')
+      if (!rowsEl) return
+      const newRow = _buildStepEditRow({ time_str: '', label: '', grams: 0 })
+      rowsEl.appendChild(newRow)
+      newRow.querySelector('.steps-edit-name')?.focus()
+    })
+
     // ── Init Render ─────────────────────────────────────────────────────────────
     renderAll()
 
@@ -607,6 +720,7 @@ export const calculatorView = {
         brewSteps:   _ext.brewSteps   ?? null,
         actualPours: _ext.actualPours ?? null,
       })
+      _closeStepsEdit()
       renderAll()
     }
 
@@ -650,6 +764,7 @@ function _applyTemplate(recipe) {
   })
   _dismissedSuggestionId = null
   hideTemplateSuggestion()
+  _closeStepsEdit()
   renderAll()
 }
 

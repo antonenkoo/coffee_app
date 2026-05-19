@@ -306,6 +306,10 @@ export function setExternalSteps(steps) {
   _externalSteps = steps ?? null
 }
 
+export function getExternalSteps() {
+  return _externalSteps
+}
+
 // Convert brewSteps (timer format) → display format for the calculator view
 function _brewStepsToDisplay(brewSteps) {
   const fmtSec = s => {
