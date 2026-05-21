@@ -61,8 +61,9 @@ export class BLEScale {
     })
     try {
       this._tareChar = await svc.getCharacteristic(TARE_UUID)
-    } catch {
+    } catch (e) {
       this._tareChar = null
+      console.warn('[BLEScale] tare char unavailable:', e.message)
     }
   }
 
@@ -108,6 +109,30 @@ export class BLEScale {
     } catch (err) {
       this._drop()
       console.warn('[BLEScale] autoReconnect:', err.message)
+    }
+  }
+
+  async calibrate(shownGrams, knownGrams) {
+    if (!this._tareChar) return 'no_char'
+    if (!shownGrams || Math.abs(shownGrams) < 1) return 'no_weight'
+    const ratio = shownGrams / knownGrams
+    if (ratio <= 0 || ratio < 0.1 || ratio > 10) return 'bad_ratio'
+    const buf = new ArrayBuffer(5)
+    const dv  = new DataView(buf)
+    dv.setUint8(0, 0x02)
+    dv.setFloat32(1, ratio, false)  // big-endian
+    try {
+      await this._tareChar.writeValueWithoutResponse(new Uint8Array(buf))
+      return 'ok'
+    } catch (err) {
+      console.warn('[BLEScale] calibrate write failed:', err.message)
+      try {
+        await this._tareChar.writeValue(new Uint8Array(buf))
+        return 'ok'
+      } catch (err2) {
+        console.warn('[BLEScale] calibrate fallback failed:', err2.message)
+        return 'write_error'
+      }
     }
   }
 

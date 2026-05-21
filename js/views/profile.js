@@ -3,8 +3,10 @@ import { auth, logOut, getUserProfile, updateUserProfile, loadMyRecipes, loadCus
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js'
 import { t, setLang, applyI18n } from '../i18n.js'
 import { isGuest, showAuthOverlay } from '../auth-manager.js'
+import { BLEScale } from '../scale.js'
 
 let _authUnsubscribe = null
+let _calScale = null
 
 // ── Sound preview (used by profile page) ────────────────────────────────────
 let _profileAudioCtx = null
@@ -33,6 +35,225 @@ function _tone(ctx, freq, dur, delayStart = 0, type = 'sine') {
     gain.gain.exponentialRampToValueAtTime(0.001, t + dur)
     osc.start(t); osc.stop(t + dur)
   } catch (_) {}
+}
+
+function _initAccuracyCard() {
+  const card      = document.getElementById('acc-test-card')
+  const hintEl    = document.getElementById('acc-hint')
+  const progressEl= document.getElementById('acc-progress')
+  const actionBtn = document.getElementById('acc-action-btn')
+  const readingsEl= document.getElementById('acc-readings')
+  const listEl    = document.getElementById('acc-readings-list')
+  const verdictEl = document.getElementById('acc-verdict')
+  const verdictMain = document.getElementById('acc-verdict-main')
+  const verdictSub  = document.getElementById('acc-verdict-sub')
+  const resetBtn  = document.getElementById('acc-reset-btn')
+  if (!card) return
+
+  const TESTS = {
+    repeat: { hint: 'Ставьте тот же груз → нажмите «Измерить» → уберите → повторите 5 раз', btn: 'Измерить', total: 5 },
+    drift:  { hint: 'Поставьте груз и нажмите «Старт» — 20 замеров каждую секунду', btn: 'Старт', total: 20 },
+    zero:   { hint: 'Поставьте груз → «Вес» → уберите → «Ноль». 3 цикла', btn: 'Вес', total: 6 },
+  }
+
+  function grade(dev) {
+    if (dev <= 0.10) return { label: '★★★ Отлично',         color: 'var(--accent)' }
+    if (dev <= 0.30) return { label: '★★☆ Хорошо',          color: '#22c55e' }
+    if (dev <= 0.60) return { label: '★☆☆ Приемлемо',       color: '#f59e0b' }
+    return               { label: '✗ Нужен датчик лучше', color: 'var(--warning)' }
+  }
+
+  let activeTest = 'repeat'
+  let st = {}
+
+  function resetTest() {
+    const t = TESTS[activeTest]
+    st = { measurements: [], zeros: [], weights: [], phase: 'weight', timer: null, done: false }
+    hintEl.textContent     = t.hint
+    progressEl.textContent = activeTest === 'zero' ? 'Цикл 0 / 3' : `0 / ${t.total}`
+    actionBtn.textContent  = t.btn
+    actionBtn.disabled     = false
+    readingsEl.style.display = 'none'
+    verdictEl.style.display  = 'none'
+    resetBtn.style.display   = 'none'
+    listEl.innerHTML = ''
+  }
+
+  function setTab(t) {
+    if (st.timer) { clearInterval(st.timer); st.timer = null }
+    activeTest = t
+    card.querySelectorAll('.acc-tab').forEach(b => b.classList.toggle('active', b.dataset.t === t))
+    resetTest()
+  }
+
+  function addRow(label, val, accent) {
+    readingsEl.style.display = ''
+    const d = document.createElement('div')
+    d.style.color = accent ? 'var(--text)' : 'var(--text-dim)'
+    d.textContent = `${label}: ${val.toFixed(2)} г`
+    listEl.appendChild(d)
+  }
+
+  function showVerdict(dev, sub) {
+    const g = grade(dev)
+    verdictMain.textContent = `${g.label} — погрешность ±${dev.toFixed(2)} г`
+    verdictMain.style.color = g.color
+    verdictSub.textContent  = sub
+    verdictEl.style.display = ''
+    resetBtn.style.display  = ''
+    actionBtn.disabled = true
+    st.done = true
+  }
+
+  function doRepeat() {
+    const w = _calScale?.weight
+    if (w == null) return
+    st.measurements.push(w)
+    addRow(`#${st.measurements.length}`, w, true)
+    progressEl.textContent = `${st.measurements.length} / 5`
+    if (st.measurements.length >= 5) {
+      const mean   = st.measurements.reduce((a, b) => a + b, 0) / 5
+      const diffs  = st.measurements.map(v => Math.abs(v - mean))
+      const maxDev = Math.max(...diffs)
+      const stdDev = Math.sqrt(diffs.reduce((a, b) => a + b * b, 0) / 5)
+      const info = document.createElement('div')
+      info.style.cssText = 'margin-top:4px;font-size:0.75rem;color:var(--text-dim);'
+      info.textContent = `Среднее: ${mean.toFixed(2)} г  |  СКО: ±${stdDev.toFixed(2)} г`
+      listEl.appendChild(info)
+      showVerdict(maxDev, `Среднее ${mean.toFixed(2)} г, макс. отклонение от среднего ${maxDev.toFixed(2)} г`)
+    }
+  }
+
+  function doDrift() {
+    if (st.timer) return
+    actionBtn.textContent = '...'
+    actionBtn.disabled = true
+    const total = 20
+    let count = 0
+    st.timer = setInterval(() => {
+      const w = _calScale?.weight
+      if (w == null) return
+      st.measurements.push(w)
+      count++
+      addRow(`${count} с`, w, false)
+      progressEl.textContent = `${count} / ${total}`
+      if (count >= total) {
+        clearInterval(st.timer)
+        const mn = Math.min(...st.measurements), mx = Math.max(...st.measurements)
+        showVerdict(mx - mn, `Мин ${mn.toFixed(2)} г, макс ${mx.toFixed(2)} г, диапазон ${(mx - mn).toFixed(2)} г`)
+      }
+    }, 1000)
+  }
+
+  function doZero() {
+    const w = _calScale?.weight
+    if (w == null) return
+    if (st.phase === 'weight') {
+      st.weights.push(w)
+      addRow(`Вес #${st.weights.length}`, w, true)
+      st.phase = 'zero'
+      actionBtn.textContent = 'Ноль'
+      hintEl.textContent = 'Уберите груз, дождитесь ~0 г, нажмите «Ноль»'
+    } else {
+      st.zeros.push(w)
+      addRow(`Ноль #${st.zeros.length}`, w, false)
+      progressEl.textContent = `Цикл ${st.zeros.length} / 3`
+      if (st.zeros.length >= 3) {
+        const maxZero    = Math.max(...st.zeros.map(Math.abs))
+        const weightRange= Math.max(...st.weights) - Math.min(...st.weights)
+        const worst      = Math.max(maxZero, weightRange / 2)
+        showVerdict(worst,
+          `Откл. нуля: макс ±${maxZero.toFixed(2)} г  |  Разброс веса: ${weightRange.toFixed(2)} г`)
+        return
+      }
+      st.phase = 'weight'
+      actionBtn.textContent = 'Вес'
+      hintEl.textContent = 'Поставьте груз обратно, дождитесь стабилизации, нажмите «Вес»'
+    }
+  }
+
+  card.querySelectorAll('.acc-tab').forEach(b => b.addEventListener('click', () => setTab(b.dataset.t)))
+  actionBtn.addEventListener('click', () => {
+    if (st.done) return
+    if (activeTest === 'repeat') doRepeat()
+    else if (activeTest === 'drift') doDrift()
+    else if (activeTest === 'zero') doZero()
+  })
+  resetBtn.addEventListener('click', () => resetTest())
+
+  setTab('repeat')
+}
+
+function _initScaleCard() {
+  const statusEl  = document.getElementById('cal-ble-status')
+  const calSect   = document.getElementById('cal-section')
+  const connectBtn = document.getElementById('cal-connect-btn')
+  const liveEl    = document.getElementById('cal-live-weight')
+  const resultMsg = document.getElementById('cal-result-msg')
+  const applyBtn  = document.getElementById('cal-apply-btn')
+  const knownIn   = document.getElementById('cal-known-input')
+  if (!connectBtn) return
+
+  const accCard = document.getElementById('acc-test-card')
+
+  _calScale = new BLEScale({
+    onWeight: (g) => { if (liveEl) liveEl.textContent = g.toFixed(1) + ' г' },
+    onState:  (state) => {
+      if (!statusEl) return
+      if (state === 'connected') {
+        statusEl.textContent    = 'Подключены'
+        calSect.style.display  = ''
+        if (accCard) accCard.style.display = ''
+        connectBtn.textContent = 'Отключить'
+        connectBtn.disabled    = false
+      } else if (state === 'connecting') {
+        statusEl.textContent = 'Подключение...'
+        connectBtn.disabled  = true
+      } else {
+        statusEl.textContent   = 'Не подключены'
+        calSect.style.display  = 'none'
+        if (accCard) accCard.style.display = 'none'
+        if (liveEl) liveEl.textContent = '—'
+        connectBtn.textContent = 'Подключить'
+        connectBtn.disabled    = false
+      }
+    }
+  })
+
+  connectBtn.addEventListener('click', async () => {
+    if (_calScale.state === 'connected') _calScale.disconnect()
+    else await _calScale.connect()
+  })
+
+  applyBtn.addEventListener('click', async () => {
+    const shownG = _calScale.weight
+    const knownG = parseFloat(knownIn.value)
+    if (isNaN(knownG) || knownG <= 0) {
+      resultMsg.textContent = 'Введите эталонный вес'
+      resultMsg.style.color = 'var(--warning)'
+      return
+    }
+    applyBtn.disabled     = true
+    resultMsg.textContent = ''
+    const result = await _calScale.calibrate(shownG, knownG)
+    const msgs = {
+      ok:          { text: `✓ Откалибровано`,              color: 'var(--accent)'  },
+      no_char:     { text: '✗ Прошивка не поддерживает',   color: 'var(--warning)' },
+      no_weight:   { text: '✗ Поставьте груз на весы',     color: 'var(--warning)' },
+      bad_ratio:   { text: '✗ Слишком большая погрешность', color: 'var(--warning)' },
+      write_error: { text: '✗ Ошибка записи BLE',          color: 'var(--warning)' },
+    }
+    const m = msgs[result] || msgs.write_error
+    resultMsg.textContent = m.text
+    resultMsg.style.color  = m.color
+    setTimeout(() => { applyBtn.disabled = false; resultMsg.textContent = '' }, 3000)
+  })
+
+  window.addEventListener('hashchange', () => {
+    if (_calScale) { _calScale.disconnect(); _calScale = null }
+  }, { once: true })
+
+  _initAccuracyCard()
 }
 
 export const profileView = {
@@ -125,12 +346,76 @@ export const profileView = {
       </div>
 
       <button id="signout-btn" class="signout-btn" data-i18n="profile.signout">Выйти из аккаунта</button>
+    </div>
+
+    <div class="settings-card">
+      <div class="settings-card-title">Весы</div>
+      <div class="settings-row">
+        <span class="settings-label">Bluetooth</span>
+        <span id="cal-ble-status" class="settings-value">Не подключены</span>
+      </div>
+      <div class="settings-row" style="justify-content:flex-end;">
+        <button id="cal-connect-btn" class="btn-secondary">Подключить</button>
+      </div>
+
+      <div id="cal-section" style="display:none;">
+        <div class="settings-row">
+          <span class="settings-label">Текущий вес</span>
+          <span id="cal-live-weight" class="settings-value" style="font-variant-numeric:tabular-nums;min-width:56px;">—</span>
+        </div>
+        <div class="settings-row">
+          <span class="settings-label">Эталонный вес (г)</span>
+          <input id="cal-known-input" type="number" min="1" max="5000" step="0.1"
+                 class="settings-input" placeholder="напр. 200">
+        </div>
+        <div class="settings-row" style="justify-content:space-between;">
+          <span id="cal-result-msg" style="font-size:0.8rem;"></span>
+          <button id="cal-apply-btn" class="nickname-save-btn">Откалибровать</button>
+        </div>
+        <div class="settings-row" style="padding-top:0;">
+          <span style="font-size:0.75rem;color:var(--text-dim);line-height:1.5;">
+            Поставьте груз известного веса, дождитесь стабильного показания, введите его точный вес и нажмите «Откалибровать». Коэффициент сохраняется в весах.
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div id="acc-test-card" class="settings-card" style="display:none;">
+      <div class="settings-card-title">Тест точности</div>
+      <div class="settings-row" style="gap:6px;flex-wrap:wrap;padding-bottom:0;">
+        <button class="acc-tab active" data-t="repeat">Повторяемость</button>
+        <button class="acc-tab" data-t="drift">Дрейф</button>
+        <button class="acc-tab" data-t="zero">Ноль</button>
+      </div>
+      <div class="settings-row" style="padding-top:6px;padding-bottom:0;">
+        <span id="acc-hint" style="font-size:0.78rem;color:var(--text-dim);line-height:1.5;"></span>
+      </div>
+      <div class="settings-row" style="justify-content:space-between;align-items:center;">
+        <span id="acc-progress" style="font-size:0.82rem;color:var(--text-dim);"></span>
+        <button id="acc-action-btn" class="nickname-save-btn">Измерить</button>
+      </div>
+      <div id="acc-readings" style="display:none;padding:0 16px 4px;">
+        <div id="acc-readings-list" style="font-size:0.8rem;line-height:1.9;font-variant-numeric:tabular-nums;"></div>
+      </div>
+      <div id="acc-verdict" style="display:none;" class="settings-row">
+        <div style="width:100%;">
+          <div id="acc-verdict-main" style="font-size:0.88rem;font-weight:600;margin-bottom:2px;"></div>
+          <div id="acc-verdict-sub" style="font-size:0.75rem;color:var(--text-dim);"></div>
+        </div>
+      </div>
+      <div class="settings-row" style="justify-content:flex-end;padding-top:0;">
+        <button id="acc-reset-btn" class="btn-ghost" style="font-size:0.78rem;padding:4px 10px;display:none;">↺ Сбросить</button>
+      </div>
     </div>`
   },
 
   init() {
     applyI18n()
     if (_authUnsubscribe) { _authUnsubscribe(); _authUnsubscribe = null }
+
+    // Scale calibration card — always available, no auth required
+    if (_calScale) { _calScale.disconnect(); _calScale = null }
+    _initScaleCard()
 
     // Guest wall
     if (isGuest()) {
