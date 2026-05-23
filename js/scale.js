@@ -114,9 +114,9 @@ export class BLEScale {
 
   async calibrate(shownGrams, knownGrams) {
     if (!this._tareChar) return 'no_char'
-    if (!shownGrams || Math.abs(shownGrams) < 1) return 'no_weight'
+    if (!shownGrams || Math.abs(shownGrams) < 0.5) return 'no_weight'
     const ratio = shownGrams / knownGrams
-    if (ratio <= 0 || ratio < 0.1 || ratio > 10) return 'bad_ratio'
+    if (ratio <= 0 || ratio < 0.005 || ratio > 200) return 'bad_ratio'
     const buf = new ArrayBuffer(5)
     const dv  = new DataView(buf)
     dv.setUint8(0, 0x02)
